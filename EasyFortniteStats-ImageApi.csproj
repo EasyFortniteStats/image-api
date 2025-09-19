@@ -13,7 +13,7 @@
         <PackageReference Include="AsyncKeyedLock" Version="7.1.6" />
         <PackageReference Include="SkiaSharp" Version="3.119.0" />
         <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
     </ItemGroup>
     
     <!-- Include asset files -->
