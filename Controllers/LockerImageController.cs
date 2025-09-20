@@ -104,7 +104,7 @@ public class AccountImageController : ControllerBase
         namePaint.IsAntialias = true;
         namePaint.Color = SKColors.White;
 
-        nameFont.MeasureText(locker.PlayerName, out  var textBounds);
+        nameFont.MeasureText(locker.PlayerName, out var textBounds);
         canvas.DrawText(locker.PlayerName, 50 + resizeIcon.Width + splitWidth * 3, 58 - textBounds.Top, nameFont, namePaint);
 
         using var discordBoxBitmap = await ImageUtils.GenerateDiscordBox(_assets, locker.UserName, uiResizingFactor);
