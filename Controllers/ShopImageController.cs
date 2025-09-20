@@ -11,13 +11,13 @@ namespace EasyFortniteStats_ImageApi.Controllers;
 
 [ApiController]
 [Route("shop")]
-public partial class ShopImageController : ControllerBase
+public partial class ShopImageController(
+    IMemoryCache cache,
+    IHttpClientFactory clientFactory,
+    AsyncKeyedLocker<string> namedLock,
+    SharedAssets assets)
+    : ControllerBase
 {
-    private readonly IMemoryCache _cache;
-    private readonly IHttpClientFactory _clientFactory;
-    private readonly AsyncKeyedLocker<string> _namedLock;
-    private readonly SharedAssets _assets;
-
     // Constants
     private const int HORIZONTAL_PADDING = 100;
     private const int BOTTOM_PADDING = 100;
@@ -50,15 +50,6 @@ public partial class ShopImageController : ControllerBase
         }
     };
 
-    public ShopImageController(IMemoryCache cache, IHttpClientFactory clientFactory, AsyncKeyedLocker<string> namedLock,
-        SharedAssets assets)
-    {
-        _cache = cache;
-        _clientFactory = clientFactory;
-        _namedLock = namedLock;
-        _assets = assets;
-    }
-
     [HttpPost]
     public async Task<IActionResult> Shop([FromBody] Shop shop, [FromQuery] string? locale, [FromQuery] bool? isNewShop)
     {
@@ -71,31 +62,31 @@ public partial class ShopImageController : ControllerBase
         SKBitmap? templateBitmap;
         ShopSectionLocationData[]? locationData;
 
-        using (await _namedLock.LockAsync("shop_template").ConfigureAwait(false))
+        using (await namedLock.LockAsync("shop_template").ConfigureAwait(false))
         {
-            templateBitmap = _cache.Get<SKBitmap?>($"shop_template_bmp_{templateHash}");
-            locationData = _cache.Get<ShopSectionLocationData[]?>($"shop_location_data_{templateHash}");
+            templateBitmap = cache.Get<SKBitmap?>($"shop_template_bmp_{templateHash}");
+            locationData = cache.Get<ShopSectionLocationData[]?>($"shop_location_data_{templateHash}");
             if (_isNewShop || templateBitmap is null)
             {
                 await PrefetchImages(shop);
                 var templateGenerationResult = await GenerateTemplate(shop);
                 templateBitmap = templateGenerationResult.Item2;
                 locationData = templateGenerationResult.Item1;
-                _cache.Set($"shop_template_bmp_{templateHash}", templateBitmap, ShopImageCacheOptions);
-                _cache.Set($"shop_location_data_{templateHash}", locationData, TimeSpan.FromMinutes(10));
+                cache.Set($"shop_template_bmp_{templateHash}", templateBitmap, ShopImageCacheOptions);
+                cache.Set($"shop_location_data_{templateHash}", locationData, TimeSpan.FromMinutes(10));
             }
         }
 
         SKBitmap? localeTemplateBitmap;
 
         var lockName = $"shop_template_{locale}";
-        using (await _namedLock.LockAsync(lockName).ConfigureAwait(false))
+        using (await namedLock.LockAsync(lockName).ConfigureAwait(false))
         {
-            localeTemplateBitmap = _cache.Get<SKBitmap?>($"shop_template_{locale}_bmp");
+            localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_template_{locale}_bmp");
             if (_isNewShop || localeTemplateBitmap == null)
             {
                 localeTemplateBitmap = await GenerateLocaleTemplate(shop, templateBitmap, locationData!);
-                _cache.Set($"shop_template_{locale}_bmp", localeTemplateBitmap, ShopImageCacheOptions);
+                cache.Set($"shop_template_{locale}_bmp", localeTemplateBitmap, ShopImageCacheOptions);
             }
         }
 
@@ -116,18 +107,18 @@ public partial class ShopImageController : ControllerBase
         SKBitmap? templateBitmap;
         ShopSectionLocationData? shopSectionLocationData;
 
-        using (await _namedLock.LockAsync($"shop_section_template_{section.Id}").ConfigureAwait(false))
+        using (await namedLock.LockAsync($"shop_section_template_{section.Id}").ConfigureAwait(false))
         {
-            templateBitmap = _cache.Get<SKBitmap?>($"shop_section_template_bmp_{section.Id}");
-            shopSectionLocationData = _cache.Get<ShopSectionLocationData?>($"shop_section_location_data_{section.Id}");
+            templateBitmap = cache.Get<SKBitmap?>($"shop_section_template_bmp_{section.Id}");
+            shopSectionLocationData = cache.Get<ShopSectionLocationData?>($"shop_section_location_data_{section.Id}");
             if (_isNewShop || templateBitmap is null)
             {
                 await PrefetchImages([section]);
                 var templateGenerationResult = await GenerateSectionTemplate(section);
                 templateBitmap = templateGenerationResult.Item2;
                 shopSectionLocationData = templateGenerationResult.Item1;
-                _cache.Set($"shop_section_template_bmp_{section.Id}", templateBitmap, ShopImageCacheOptions);
-                _cache.Set($"shop_section_location_data_{section.Id}", shopSectionLocationData,
+                cache.Set($"shop_section_template_bmp_{section.Id}", templateBitmap, ShopImageCacheOptions);
+                cache.Set($"shop_section_location_data_{section.Id}", shopSectionLocationData,
                     TimeSpan.FromMinutes(10));
             }
         }
@@ -135,14 +126,14 @@ public partial class ShopImageController : ControllerBase
         SKBitmap? localeTemplateBitmap;
 
         var lockName = $"shop_section_template_{locale}_{section.Id}";
-        using (await _namedLock.LockAsync(lockName).ConfigureAwait(false))
+        using (await namedLock.LockAsync(lockName).ConfigureAwait(false))
         {
-            localeTemplateBitmap = _cache.Get<SKBitmap?>($"shop_section_template_{locale}_bmp_{section.Id}");
+            localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_section_template_{locale}_bmp_{section.Id}");
             if (_isNewShop || localeTemplateBitmap == null)
             {
                 localeTemplateBitmap =
                     await GenerateSectionLocaleTemplate(section, templateBitmap, shopSectionLocationData!);
-                _cache.Set($"shop_section_template_{locale}_bmp_{section.Id}", localeTemplateBitmap,
+                cache.Set($"shop_section_template_{locale}_bmp_{section.Id}", localeTemplateBitmap,
                     ShopImageCacheOptions);
             }
         }
@@ -168,16 +159,16 @@ public partial class ShopImageController : ControllerBase
         await Parallel.ForEachAsync(entries, options, async (entry, token) =>
         {
             var cacheKey = $"shop_image_{entry.Id}";
-            using (await _namedLock.LockAsync(cacheKey, token).ConfigureAwait(false))
+            using (await namedLock.LockAsync(cacheKey, token).ConfigureAwait(false))
             {
-                var cachedBitmap = _cache.Get<SKBitmap?>(cacheKey);
+                var cachedBitmap = cache.Get<SKBitmap?>(cacheKey);
                 if (cachedBitmap is not null)
                 {
                     entry.Image = cachedBitmap;
                     return;
                 }
 
-                using var client = _clientFactory.CreateClient();
+                using var client = clientFactory.CreateClient();
                 var url = entry.ImageUrl ?? entry.FallbackImageUrl;
                 SKBitmap bitmap;
 
@@ -193,7 +184,7 @@ public partial class ShopImageController : ControllerBase
 
                 entry.Image = bitmap;
                 // cache image for 10 minutes & make sure it gets disposed after the period
-                _cache.Set(cacheKey, bitmap, ShopImageCacheOptions);
+                cache.Set(cacheKey, bitmap, ShopImageCacheOptions);
             }
         });
     }
@@ -204,7 +195,7 @@ public partial class ShopImageController : ControllerBase
         var bitmap = new SKBitmap(imageInfo);
         using var canvas = new SKCanvas(bitmap);
 
-        var backgroundBitmap = await _assets.GetBitmap("data/images/{0}", shop.BackgroundImagePath); // don't dispose
+        var backgroundBitmap = await assets.GetBitmap("data/images/{0}", shop.BackgroundImagePath); // don't dispose
         if (backgroundBitmap is null)
         {
             using var paint = new SKPaint();
@@ -233,10 +224,10 @@ public partial class ShopImageController : ControllerBase
 
         canvas.DrawBitmap(templateBitmap, 0, 0);
 
-        if (shop.CreatorCode != null)
+        if (shop is { CreatorCode: not null, CreatorCodeTitle: not null })
         {
             using var shopTitlePaint = new SKPaint();
-            using var shopTitleFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf"), TITLE_FONT_SIZE);
+            using var shopTitleFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf"), TITLE_FONT_SIZE);
             shopTitlePaint.IsAntialias = true;
 
             var shopTitleWidth = shopTitleFont.MeasureText(shop.Title);
@@ -246,7 +237,7 @@ public partial class ShopImageController : ControllerBase
                 await GenerateCreatorCodeBox(shop.CreatorCodeTitle, shop.CreatorCode, maxBoxWidth);
             canvas.DrawBitmap(creatorCodeBoxBitmap, imageInfo.Width - 100 - creatorCodeBoxBitmap.Width, 100);
 
-            var adBannerBitmap = await _assets.GetBitmap("Assets/Images/Shop/ad_banner.png"); // don't dispose
+            var adBannerBitmap = await assets.GetBitmap("Assets/Images/Shop/ad_banner.png"); // don't dispose
             canvas.DrawBitmap(adBannerBitmap, imageInfo.Width - 100 - 50 - adBannerBitmap!.Width,
                 100 - adBannerBitmap.Height / 2f);
         }
@@ -265,7 +256,7 @@ public partial class ShopImageController : ControllerBase
 
         // Drawing the shop title
         using var shopTitlePaint = new SKPaint();
-        using var shopTitleFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf"), TITLE_FONT_SIZE);
+        using var shopTitleFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf"), TITLE_FONT_SIZE);
         shopTitlePaint.IsAntialias = true;
         shopTitlePaint.Color = SKColors.White;
 
@@ -274,7 +265,7 @@ public partial class ShopImageController : ControllerBase
 
         // Drawing the date
         using var datePaint = new SKPaint();
-        using var dateFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-86BoldItalic.otf"), DATE_FONT_SIZE);
+        using var dateFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-86BoldItalic.otf"), DATE_FONT_SIZE);
         datePaint.IsAntialias = true;
         datePaint.Color = SKColors.White;
         var datePoint = new SKPoint(
@@ -290,7 +281,7 @@ public partial class ShopImageController : ControllerBase
             if (sectionLocationData.Name != null)
             {
                 using var sectionNamePaint = new SKPaint();
-                using var sectionNameFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-86BoldItalic.otf"), SECTION_NAME_FONT_SIZE);
+                using var sectionNameFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-86BoldItalic.otf"), SECTION_NAME_FONT_SIZE);
                 sectionNamePaint.IsAntialias = true;
                 sectionNamePaint.Color = SKColors.White;
 
@@ -306,7 +297,7 @@ public partial class ShopImageController : ControllerBase
                     continue;
 
                 using var entryNamePaint = new SKPaint();
-                using var entryNameFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf"), ENTRY_NAME_FONT_SIZE);
+                using var entryNameFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf"), ENTRY_NAME_FONT_SIZE);
                 entryNamePaint.Color = SKColors.White;
 
                 SKRect entryNameTextBounds;
@@ -322,7 +313,7 @@ public partial class ShopImageController : ControllerBase
 
                 // Draw the shop entry price
                 using var pricePaint = new SKPaint();
-                using var priceFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf"), ENTRY_PRICE_FONT_SIZE);
+                using var priceFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf"), ENTRY_PRICE_FONT_SIZE);
                 pricePaint.IsAntialias = true;
                 pricePaint.Color = SKColors.White;
 
@@ -335,7 +326,7 @@ public partial class ShopImageController : ControllerBase
                 if (shopEntry.FinalPrice != shopEntry.RegularPrice)
                 {
                     using var oldPricePaint = new SKPaint();
-                    using var oldPriceFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf"), ENTRY_PRICE_FONT_SIZE);
+                    using var oldPriceFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf"), ENTRY_PRICE_FONT_SIZE);
                     oldPricePaint.IsAntialias = true;
                     oldPricePaint.Color = SKColors.White.WithAlpha((int)(.6 * 255));
 
@@ -463,12 +454,12 @@ public partial class ShopImageController : ControllerBase
         creatorCode = $"{creatorCode} ";
 
         using var creatorCodeTitlePaint = new SKPaint();
-        using var creatorCodeTitleFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-76Bold.otf"), 100f);
+        using var creatorCodeTitleFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-76Bold.otf"), 100f);
         creatorCodeTitlePaint.IsAntialias = true;
         creatorCodeTitlePaint.Color = SKColors.Black;
 
         using var creatorCodePaint = new SKPaint();
-        using var creatorCodeFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-76Bold.otf"), 100f);
+        using var creatorCodeFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-76Bold.otf"), 100f);
         creatorCodePaint.IsAntialias = true;
         creatorCodePaint.Color = new SKColor(178, 165, 255);
 
@@ -502,7 +493,7 @@ public partial class ShopImageController : ControllerBase
     private async Task<SKBitmap> GenerateBanner(string text, IReadOnlyList<string> colors, int maxWidth)
     {
         using var bannerPaint = new SKPaint();
-        using var bannerFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-76BoldItalic.otf"), 17.0f);
+        using var bannerFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-76BoldItalic.otf"), 17.0f);
         bannerPaint.IsAntialias = true;
         bannerPaint.Color = SKColor.Parse(colors[1]);
 
@@ -607,7 +598,7 @@ public partial class ShopImageController : ControllerBase
         }
 
         // Scale image down to fit the card
-        if (shopEntry.ImageType == "track" && shopEntry.ImageUrl == null)
+        if (shopEntry is { ImageType: "track", ImageUrl: null })
         {
             using var coverBitmap = shopEntry.Image.Resize(new SKImageInfo(236, 236), SKSamplingOptions.Default);
 
@@ -622,16 +613,16 @@ public partial class ShopImageController : ControllerBase
         else
         {
             int resizeWidth, resizeHeight;
-            var aspectRatio = (float)shopEntry.Image.Width / (float)shopEntry.Image.Height;
+            var aspectRatio = shopEntry.Image.Width / shopEntry.Image.Height;
 
             if (imageInfo.Width > imageInfo.Height)
             {
                 resizeWidth = imageInfo.Width;
-                resizeHeight = (int)(imageInfo.Width / aspectRatio);
+                resizeHeight = imageInfo.Width / aspectRatio;
             }
             else
             {
-                resizeWidth = (int)(imageInfo.Height * aspectRatio);
+                resizeWidth = imageInfo.Height * aspectRatio;
                 resizeHeight = imageInfo.Height;
             }
 
@@ -697,13 +688,13 @@ public partial class ShopImageController : ControllerBase
         }
 
         // Draw V-Bucks icon
-        var vbucksBitmap = await _assets.GetBitmap("Assets/Images/Shop/vbucks_icon.png"); // don't dispose
+        var vbucksBitmap = await assets.GetBitmap("Assets/Images/Shop/vbucks_icon.png"); // don't dispose
         canvas.DrawBitmap(vbucksBitmap, 13, imageInfo.Height - vbucksBitmap!.Height - 11);
 
         if (shopEntry.IsSpecial)
         {
             using var paint = new SKPaint();
-            using var font = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-74Regular.otf"), 35.0f);
+            using var font = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-74Regular.otf"), 35.0f);
             paint.IsAntialias = true;
             paint.Color = SKColors.White;
 

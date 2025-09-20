@@ -9,19 +9,9 @@ namespace EasyFortniteStats_ImageApi.Controllers;
 
 [ApiController]
 [Route("stats")]
-public class StatsImageController : ControllerBase
+public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> namedLock, SharedAssets assets)
+    : ControllerBase
 {
-    private readonly IMemoryCache _cache;
-    private readonly AsyncKeyedLocker<string> _namedLock;
-    private readonly SharedAssets _assets;
-
-    public StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> namedLock, SharedAssets assets)
-    {
-        _cache = cache;
-        _namedLock = namedLock;
-        _assets = assets;
-    }
-
     [HttpPost]
     public async Task<IActionResult> Post(Stats stats, StatsType type = StatsType.Normal)
     {
@@ -35,13 +25,13 @@ public class StatsImageController : ControllerBase
 
         var lockName = $"stats_{type}{backgroundHash}_template_mutex";
         SKBitmap? templateBitmap;
-        using (await _namedLock.LockAsync(lockName).ConfigureAwait(false))
+        using (await namedLock.LockAsync(lockName).ConfigureAwait(false))
         {
-            _cache.TryGetValue($"stats_{type}{backgroundHash}_template_image", out templateBitmap);
+            cache.TryGetValue($"stats_{type}{backgroundHash}_template_image", out templateBitmap);
             if (templateBitmap == null)
             {
                 templateBitmap = await GenerateTemplate(stats, type);
-                _cache.Set($"stats_{type}{backgroundHash}_template_image", templateBitmap);
+                cache.Set($"stats_{type}{backgroundHash}_template_image", templateBitmap);
             }
         }
 
@@ -53,14 +43,13 @@ public class StatsImageController : ControllerBase
 
     private async Task<SKBitmap> GenerateTemplate(Stats stats, StatsType type)
     {
-        SKImageInfo imageInfo;
-        imageInfo = type == StatsType.Competitive ? new SKImageInfo(1505, 624) : new SKImageInfo(1505, 777);
+        var imageInfo = type == StatsType.Competitive ? new SKImageInfo(1505, 624) : new SKImageInfo(1505, 777);
 
         var bitmap = new SKBitmap(imageInfo);
         using var canvas = new SKCanvas(bitmap);
 
         var customBackgroundBitmap =
-            await _assets.GetBitmap("data/images/{0}",
+            await assets.GetBitmap("data/images/{0}",
                 stats.BackgroundImagePath); // don't dispose TODO: Clear caching on bg change
         if (customBackgroundBitmap is null)
         {
@@ -103,8 +92,8 @@ public class StatsImageController : ControllerBase
         boxPaint.IsAntialias = true;
         boxPaint.Color = SKColors.White.WithAlpha((int) (.2 * 255));
 
-        var fortniteFont = await _assets.GetFont("Assets/Fonts/Fortnite.ttf"); // don't dispose
-        var segoeFont = await _assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
+        var fortniteFont = await assets.GetFont("Assets/Fonts/Fortnite.ttf"); // don't dispose
+        var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
 
         using var competitiveBoxTitlePaint = new SKPaint();
         using var competitiveBoxTitleFont = new SKFont(fortniteFont, 25);
@@ -144,10 +133,10 @@ public class StatsImageController : ControllerBase
             splitPaint.Color = SKColors.White.WithAlpha((int) (.5 * 255));
             canvas.DrawRoundRect(267, 192, 1, 77, 1, 1, splitPaint);
 
-            var buildLogo = await _assets.GetBitmap("Assets/Images/Stats/BuildLogo.png"); // don't dispose
+            var buildLogo = await assets.GetBitmap("Assets/Images/Stats/BuildLogo.png"); // don't dispose
             canvas.DrawBitmap(buildLogo, new SKPoint(115, 277));
 
-            var zeroBuildLogo = await _assets.GetBitmap("Assets/Images/Stats/ZeroBuildLogo.png"); // don't dispose
+            var zeroBuildLogo = await assets.GetBitmap("Assets/Images/Stats/ZeroBuildLogo.png"); // don't dispose
             canvas.DrawBitmap(zeroBuildLogo, new SKPoint(317, 277));
 
             competitiveBoxTitleFont.MeasureText("OVERALL", out textBounds);
@@ -227,7 +216,7 @@ public class StatsImageController : ControllerBase
         boxTitleFont.MeasureText("SOLO", out textBounds);
         canvas.DrawText("SOLO", 527, 134 - textBounds.Top, boxTitleFont, boxTitlePaint);
 
-        var soloIcon = await _assets.GetBitmap("Assets/Images/Stats/PlaylistIcons/solo.png"); // don't dispose
+        var soloIcon = await assets.GetBitmap("Assets/Images/Stats/PlaylistIcons/solo.png"); // don't dispose
         canvas.DrawBitmap(soloIcon, new SKPoint(648, 134));
 
         titleFont.MeasureText("Games", out textBounds);
@@ -256,7 +245,7 @@ public class StatsImageController : ControllerBase
         boxTitleFont.MeasureText("DUOS", out textBounds);
         canvas.DrawText("DUOS", 1006, 134 - textBounds.Top, boxTitleFont, boxTitlePaint);
 
-        var duosIcon = await _assets.GetBitmap("Assets/Images/Stats/PlaylistIcons/duos.png"); // don't dispose
+        var duosIcon = await assets.GetBitmap("Assets/Images/Stats/PlaylistIcons/duos.png"); // don't dispose
         canvas.DrawBitmap(duosIcon, new SKPoint(1133, 134));
 
         titleFont.MeasureText("Games", out textBounds);
@@ -285,7 +274,7 @@ public class StatsImageController : ControllerBase
         boxTitleFont.MeasureText("TRIOS", out textBounds);
         canvas.DrawText("TRIOS", 527, 364 - textBounds.Top, boxTitleFont, boxTitlePaint);
 
-        var triosIcon = await _assets.GetBitmap(@"Assets/Images/Stats/PlaylistIcons/trios.png"); // don't dispose
+        var triosIcon = await assets.GetBitmap(@"Assets/Images/Stats/PlaylistIcons/trios.png"); // don't dispose
         canvas.DrawBitmap(triosIcon, new SKPoint(663, 364));
 
         titleFont.MeasureText("Games", out textBounds);
@@ -314,7 +303,7 @@ public class StatsImageController : ControllerBase
         boxTitleFont.MeasureText("SQUADS", out textBounds);
         canvas.DrawText("SQUADS", 1006, 364 - textBounds.Top, boxTitleFont, boxTitlePaint);
 
-        var squadsIcon = await _assets.GetBitmap(@"Assets/Images/Stats/PlaylistIcons/squads.png"); // don't dispose
+        var squadsIcon = await assets.GetBitmap(@"Assets/Images/Stats/PlaylistIcons/squads.png"); // don't dispose
         canvas.DrawBitmap(squadsIcon, new SKPoint(1191, 364));
 
         titleFont.MeasureText("Games", out textBounds);
@@ -345,7 +334,7 @@ public class StatsImageController : ControllerBase
             boxTitleFont.MeasureText("TEAMS", out textBounds);
             canvas.DrawText("TEAMS", 527, 594 - textBounds.Top, boxTitleFont, boxTitlePaint);
 
-            var teamsIcon = await _assets.GetBitmap(@"Assets/Images/Stats/PlaylistIcons/teams.png"); // don't dispose
+            var teamsIcon = await assets.GetBitmap(@"Assets/Images/Stats/PlaylistIcons/teams.png"); // don't dispose
             canvas.DrawBitmap(teamsIcon, new SKPoint(683, 594));
 
             titleFont.MeasureText("Games", out textBounds);
@@ -375,8 +364,8 @@ public class StatsImageController : ControllerBase
 
         canvas.DrawBitmap(templateBitmap, SKPoint.Empty);
 
-        var fortniteFont = await _assets.GetFont("Assets/Fonts/Fortnite.ttf"); // don't dispose
-        var segoeFont = await _assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
+        var fortniteFont = await assets.GetFont("Assets/Fonts/Fortnite.ttf"); // don't dispose
+        var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
 
         using var namePaint = new SKPaint();
         using var nameFont = new SKFont(segoeFont, 64);
@@ -409,7 +398,7 @@ public class StatsImageController : ControllerBase
         rankingPaint.Color = SKColors.White;
 
         var inputIcon =
-            await _assets.GetBitmap($"Assets/Images/Stats/InputTypes/{stats.InputType}.png"); // don't dispose
+            await assets.GetBitmap($"Assets/Images/Stats/InputTypes/{stats.InputType}.png"); // don't dispose
         canvas.DrawBitmap(inputIcon, 50, 50);
 
         nameFont.MeasureText(stats.PlayerName, out var textBounds);
@@ -417,10 +406,10 @@ public class StatsImageController : ControllerBase
 
         if (stats.IsVerified)
         {
-            var verifiedIcon = await _assets.GetBitmap("Assets/Images/Stats/Verified.png"); // don't dispose
+            var verifiedIcon = await assets.GetBitmap("Assets/Images/Stats/Verified.png"); // don't dispose
             canvas.DrawBitmap(verifiedIcon, 159 + textBounds.Width + 5, 47);
 
-            using var discordBoxBitmap = await ImageUtils.GenerateDiscordBox(_assets, stats.UserName ?? "???#0000");
+            using var discordBoxBitmap = await ImageUtils.GenerateDiscordBox(assets, stats.UserName ?? "???#0000");
             canvas.DrawBitmap(discordBoxBitmap, imageInfo.Width - 50 - discordBoxBitmap.Width, 39);
         }
 
@@ -438,9 +427,9 @@ public class StatsImageController : ControllerBase
                     ? "Unranked"
                     : rankedStatsEntry.CurrentDivision.ToString();
                 var divisionIconBitmap =
-                    await _assets.GetBitmap(
+                    await assets.GetBitmap(
                         $"Assets/Images/Stats/DivisionIcons/{divisionAssetName}.png"); // don't dispose
-                canvas.DrawBitmap(divisionIconBitmap, x - divisionIconBitmap!.Width / 2, 109);
+                canvas.DrawBitmap(divisionIconBitmap, x - divisionIconBitmap!.Width / 2f, 109);
 
                 divisionFont.MeasureText(rankedStatsEntry.CurrentDivisionName, out textBounds);
                 canvas.DrawText(rankedStatsEntry.CurrentDivisionName, x - (int) (textBounds.Width / 2), 206 - textBounds.Top, divisionFont, divisionPaint);
@@ -449,7 +438,7 @@ public class StatsImageController : ControllerBase
                     const int maxBarWidth = 130, barHeight = 6;
                     var progressText = $"{(int) (rankedStatsEntry.Progress * 100)}%";
                     rankProgressFont.MeasureText(progressText, out textBounds);
-                    var barX = x - textBounds.Width / 2 - maxBarWidth / 2;
+                    var barX = x - textBounds.Width / 2f - maxBarWidth / 2f;
 
                     using var barBackgroundPaint = new SKPaint();
                     barBackgroundPaint.IsAntialias = true;
@@ -631,7 +620,7 @@ public class StatsImageController : ControllerBase
         valueFont.MeasureText(stats.Squads.Top6, out textBounds);
         canvas.DrawText(stats.Squads.Top6, 1316, 518 - textBounds.Top, valueFont, valuePaint);
 
-        if (type == StatsType.Normal)
+        if (type == StatsType.Normal && stats.Teams != null)
         {
             valueFont.MeasureText(stats.Teams.MatchesPlayed, out textBounds);
             canvas.DrawText(stats.Teams.MatchesPlayed, 537, 671 - textBounds.Top, valueFont, valuePaint);

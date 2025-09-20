@@ -9,12 +9,12 @@ namespace EasyFortniteStats_ImageApi.Controllers;
 
 [ApiController]
 [Route("locker")]
-public class AccountImageController : ControllerBase
+public class AccountImageController(
+    IHttpClientFactory clientFactory,
+    AsyncKeyedLocker<string> namedLock,
+    SharedAssets assets)
+    : ControllerBase
 {
-    private readonly IHttpClientFactory _clientFactory;
-    private readonly AsyncKeyedLocker<string> _namedLock;
-    private readonly SharedAssets _assets;
-
     private const string BASE_ITEM_IMAGE_PATH = "data/images/locker/items";
 
     private static readonly IReadOnlyList<(int Count, int Quality)> QualityMapping = new List<(int, int)>
@@ -27,21 +27,13 @@ public class AccountImageController : ControllerBase
         (500, 75),
     };
 
-    public AccountImageController(IHttpClientFactory clientFactory, AsyncKeyedLocker<string> namedLock,
-        SharedAssets assets)
-    {
-        _clientFactory = clientFactory;
-        _namedLock = namedLock;
-        _assets = assets;
-    }
-
     [HttpPost]
     public async Task<IActionResult> Post(Locker locker, [FromQuery] bool? lossless)
     {
         Console.WriteLine(
             $"Locker image request | Name = {locker.PlayerName} | Locale = {locker.Locale} | Items = {locker.Items.Length}");
         var lockKey = $"locker_{locker.RequestId}";
-        using (await _namedLock.LockAsync(lockKey).ConfigureAwait(false))
+        using (await namedLock.LockAsync(lockKey).ConfigureAwait(false))
         {
             await GenerateItemCards(locker);
         }
@@ -62,9 +54,7 @@ public class AccountImageController : ControllerBase
         var rows = locker.Items.Length / columns + (locker.Items.Length % columns == 0 ? 0 : 1);
 
         var uiResizingFactor = (float)(1 + rows * 0.15);
-
         var nameFontSize = (int)(64 * uiResizingFactor);
-
         var footerSpace = (int)(80 * uiResizingFactor);
         var imageInfo = new SKImageInfo(
             50 + 256 * columns + 25 * (columns - 1) + 50,
@@ -83,9 +73,9 @@ public class AccountImageController : ControllerBase
 
         canvas.DrawRect(0, 0, imageInfo.Width, imageInfo.Height, backgroundPaint);
 
-        var segoeFont = await _assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
+        var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
 
-        var icon = await _assets.GetBitmap("Assets/Images/Locker/Icon.png"); // don't dispose
+        var icon = await assets.GetBitmap("Assets/Images/Locker/Icon.png"); // don't dispose
         var resize = (int)(50 * uiResizingFactor);
         using var resizeIcon = icon!.Resize(new SKImageInfo(resize, resize), SKSamplingOptions.Default);
         canvas.DrawBitmap(resizeIcon, 50, 50);
@@ -107,7 +97,7 @@ public class AccountImageController : ControllerBase
         nameFont.MeasureText(locker.PlayerName, out var textBounds);
         canvas.DrawText(locker.PlayerName, 50 + resizeIcon.Width + splitWidth * 3, 58 - textBounds.Top, nameFont, namePaint);
 
-        using var discordBoxBitmap = await ImageUtils.GenerateDiscordBox(_assets, locker.UserName, uiResizingFactor);
+        using var discordBoxBitmap = await ImageUtils.GenerateDiscordBox(assets, locker.UserName, uiResizingFactor);
         canvas.DrawBitmap(discordBoxBitmap, imageInfo.Width - 50 - discordBoxBitmap.Width, 39);
 
         var column = 0;
@@ -145,7 +135,7 @@ public class AccountImageController : ControllerBase
             SKBitmap? itemImage = null;
             if (!System.IO.File.Exists(filePath) && item.ImageUrl is not null)
             {
-                using var client = _clientFactory.CreateClient();
+                using var client = clientFactory.CreateClient();
                 byte[]? itemImageBytes;
                 try
                 {
@@ -208,7 +198,7 @@ public class AccountImageController : ControllerBase
         using var canvas = new SKCanvas(bitmap);
 
         var rarityBackground =
-            await _assets.GetBitmap($"Assets/Images/Locker/RarityBackgrounds/{lockerItem.Rarity}.png");
+            await assets.GetBitmap($"Assets/Images/Locker/RarityBackgrounds/{lockerItem.Rarity}.png");
         canvas.DrawBitmap(rarityBackground, SKPoint.Empty);
 
         if (itemImage is not null)
@@ -218,7 +208,7 @@ public class AccountImageController : ControllerBase
         else
         {
             using var questionmarkPaint = new SKPaint();
-            using var questionmarkFont = new SKFont(await _assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf"), 256.0f);
+            using var questionmarkFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf"), 256.0f);
             questionmarkPaint.IsAntialias = true;
             questionmarkPaint.Color = SKColors.White;
             
@@ -228,7 +218,7 @@ public class AccountImageController : ControllerBase
         }
 
         var typeIcon = lockerItem.SourceType != SourceType.Other
-            ? await _assets.GetBitmap($"Assets/Images/Locker/Source/{lockerItem.SourceType}.png")
+            ? await assets.GetBitmap($"Assets/Images/Locker/Source/{lockerItem.SourceType}.png")
             : null;
         using var overlayImage = ImageUtils.GenerateItemCardOverlay(imageInfo.Width, typeIcon);
         canvas.DrawBitmap(overlayImage, new SKPoint(0, imageInfo.Height - overlayImage.Height));
@@ -239,7 +229,7 @@ public class AccountImageController : ControllerBase
             new SKPoint(0, imageInfo.Height - overlayImage.Height - rarityStripe.Height + 5));
         // TODO: Fix Transparency issues
 
-        var fortniteFont = await _assets.GetFont("Assets/Fonts/Fortnite.ttf"); // don't dispose
+        var fortniteFont = await assets.GetFont("Assets/Fonts/Fortnite.ttf"); // don't dispose
 
         using var namePaint = new SKPaint();
         using var nameFont = new SKFont(fortniteFont, 18.0f);
@@ -273,7 +263,7 @@ public class AccountImageController : ControllerBase
 
     private async Task<SKBitmap> GenerateFooter(float resizeFactor)
     {
-        var poppinsFont = await _assets.GetFont("Assets/Fonts/Poppins.ttf"); // don't dispose
+        var poppinsFont = await assets.GetFont("Assets/Fonts/Poppins.ttf"); // don't dispose
 
         using var textPaint = new SKPaint();
         using var textFont = new SKFont(poppinsFont, 40.0f * resizeFactor);
@@ -290,7 +280,7 @@ public class AccountImageController : ControllerBase
         var bitmap = new SKBitmap(imageInfo);
         using var canvas = new SKCanvas(bitmap);
 
-        var logoBitmap = await _assets.GetBitmap("Assets/Images/Logo.png"); // don't dispose
+        var logoBitmap = await assets.GetBitmap("Assets/Images/Logo.png"); // don't dispose
         var logoBitmapResize =
             logoBitmap!.Resize(new SKImageInfo(imageInfo.Height, imageInfo.Height), SKSamplingOptions.Default);
         canvas.DrawBitmap(logoBitmapResize, new SKPoint(0, 0));
