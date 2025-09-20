@@ -8,15 +8,8 @@ namespace EasyFortniteStats_ImageApi.Controllers;
 
 [ApiController]
 [Route("utils")]
-public class UtilsImageController : ControllerBase
+public class UtilsImageController(SharedAssets assets) : ControllerBase
 {
-    private readonly SharedAssets _assets;
-
-    public UtilsImageController(SharedAssets assets)
-    {
-        _assets = assets;
-    }
-
     [HttpGet("collectGarbage")]
     public IActionResult CollectGarbage()
     {
@@ -35,7 +28,7 @@ public class UtilsImageController : ControllerBase
         barBackgroundPaint.IsAntialias = true;
         barBackgroundPaint.Color = SKColors.White.WithAlpha((int) (.3 * 255));
 
-        canvas.DrawRoundRect(0, bitmap.Height / 2 - 20 / 2, 500, 20, 10, 10, barBackgroundPaint);
+        canvas.DrawRoundRect(0, bitmap.Height / 2f - 20 / 2f, 500, 20, 10, 10, barBackgroundPaint);
 
         var barWidth = (int) (500 * progressBar.Progress);
         if (barWidth > 0)
@@ -50,32 +43,29 @@ public class UtilsImageController : ControllerBase
                 [0, 1],
                 SKShaderTileMode.Repeat);
 
-            canvas.DrawRoundRect(0, (float) (bitmap.Height - 20) / 2, barWidth, 20, 10, 10, barPaint);
+            canvas.DrawRoundRect(0, (bitmap.Height - 20) / 2f, barWidth, 20, 10, 10, barPaint);
         }
 
-        var segoeFont = await _assets.GetFont("Assets/Fonts/Segoe.ttf");
-        var textBounds = new SKRect();
+        var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf");
 
         using var textPaint = new SKPaint();
+        using var textFont = new SKFont(segoeFont, 20);
         textPaint.IsAntialias = true;
         textPaint.Color = SKColors.White;
-        textPaint.TextSize = 20;
-        textPaint.Typeface = segoeFont;
 
-        textPaint.MeasureText(progressBar.Text, ref textBounds);
-        canvas.DrawText(progressBar.Text, 500 + 5, (float) bitmap.Height / 2 - textBounds.MidY, textPaint);
+        textFont.MeasureText(progressBar.Text, out var textBounds);
+        canvas.DrawText(progressBar.Text, 500 + 5, (float) bitmap.Height / 2 - textBounds.MidY, textFont, textPaint);
 
         if (progressBar.BarText != null)
         {
             using var barTextPaint = new SKPaint();
+            using var barTextFont = new SKFont(segoeFont, 15);
             barTextPaint.IsAntialias = true;
             barTextPaint.Color = SKColors.White;
-            barTextPaint.TextSize = 15;
-            barTextPaint.Typeface = segoeFont;
 
-            barTextPaint.MeasureText(progressBar.BarText, ref textBounds);
-            canvas.DrawText(progressBar.BarText, (int) ((500 - textBounds.Width) / 2),
-                (float) bitmap.Height / 2 - textBounds.MidY, barTextPaint);
+            barTextFont.MeasureText(progressBar.BarText, out textBounds);
+            canvas.DrawText(progressBar.BarText, (500 - textBounds.Width) / 2,
+                 bitmap.Height / 2f - textBounds.MidY, barTextFont, barTextPaint);
         }
 
         var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
@@ -87,7 +77,7 @@ public class UtilsImageController : ControllerBase
     {
         Console.WriteLine("Drop Image request");
         var mapBitmap =
-            await _assets.GetBitmap(
+            await assets.GetBitmap(
                 $"data/images/map/{drop.Locale}.png"); // don't dispose TODO: Clear caching on bg change
 
         if (mapBitmap == null)
@@ -100,7 +90,7 @@ public class UtilsImageController : ControllerBase
 
         var markerAmount = Directory.EnumerateFiles("Assets/Images/Map/Markers", "*.png").Count();
         var markerBitmap =
-            await _assets.GetBitmap(
+            await assets.GetBitmap(
                 $"Assets/Images/Map/Markers/{RandomNumberGenerator.GetInt32(markerAmount - 1)}.png"); // don't dispose
 
         const int worldRadius = 150_000;
