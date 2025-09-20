@@ -266,7 +266,6 @@ public class AccountImageController : ControllerBase
         var fontOffset = lockerItem.SourceType == SourceType.Other ? 10 : 42;
 
         sourceFont.MeasureText(lockerItem.Source, out entryNameTextBounds);
-        canvas.DrawText(lockerItem.Source, bitmap.Width - fontOffset, bitmap.Height - entryNameTextBounds.Height + 8, sourceFont, sourcePaint);
         canvas.DrawText(lockerItem.Source, bitmap.Width - fontOffset, bitmap.Height - entryNameTextBounds.Height + 8, SKTextAlign.Right, sourceFont, sourcePaint);
 
         return bitmap;
