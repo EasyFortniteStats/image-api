@@ -93,13 +93,11 @@ public class StatsImageController : ControllerBase
             canvas.DrawRoundRect(0, 0, imageInfo.Width, imageInfo.Height, 50, 50, backgroundImagePaint);
         }
 
-        using (var nameSplit = new SKPaint())
-        {
-            nameSplit.IsAntialias = true;
-            nameSplit.Color = SKColors.Gray;
+        using var nameSplit = new SKPaint();
+        nameSplit.IsAntialias = true;
+        nameSplit.Color = SKColors.Gray;
 
-            canvas.DrawRoundRect(134, 57, 5, 50, 3, 3, nameSplit);
-        }
+        canvas.DrawRoundRect(134, 57, 5, 50, 3, 3, nameSplit);
 
         using var boxPaint = new SKPaint();
         boxPaint.IsAntialias = true;
