@@ -627,7 +627,8 @@ public partial class ShopImageController(
             }
 
             using var resizedImageBitmap =
-                shopEntry.Image.Resize(new SKImageInfo(resizeWidth, resizeHeight), SKSamplingOptions.Default);
+                shopEntry.Image.Resize(new SKImageInfo(resizeWidth, resizeHeight), SKSamplingOptions.Default) ??
+                shopEntry.Image;
 
             // Car bundles get centered in the middle of the card vertically
             if (shopEntry.ImageType == "car-bundle")
