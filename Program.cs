@@ -1,5 +1,6 @@
 using AsyncKeyedLock;
 using EasyFortniteStats_ImageApi;
+using EasyFortniteStats_ImageApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,9 @@ builder.Services.AddSingleton(new AsyncKeyedLocker<string>(o =>
 }));
 
 var app = builder.Build();
+
+// Add API Key authentication middleware
+app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
