@@ -16,10 +16,10 @@ public class ImageUtils
         bmp.Dispose();
     }
 
-    public static async Task<SKBitmap> GenerateDiscordBox(SharedAssets _assets, string username,
+    public static async Task<SKBitmap> GenerateDiscordBox(SharedAssets assets, string username,
         float resizeFactor = 1.0f)
     {
-        var segoeFont = await _assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
+        var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
 
         using var discordTagTextPaint = new SKPaint();
         discordTagTextPaint.IsAntialias = true;
@@ -43,7 +43,7 @@ public class ImageUtils
         canvas.DrawRoundRect(0, 0, imageInfo.Width, imageInfo.Height, discordBoxR, discordBoxR, discordBoxPaint);
 
         var logoResizeWidth = (int)(50 * resizeFactor);
-        var discordLogoBitmap = await _assets.GetBitmap("Assets/Images/DiscordLogo.png"); // don't dispose
+        var discordLogoBitmap = await assets.GetBitmap("Assets/Images/DiscordLogo.png"); // don't dispose
         // get height with the same aspect ratio
         var logoResizeHeight = (int)(discordLogoBitmap!.Height * (logoResizeWidth / (float)discordLogoBitmap.Width));
         var discordLogoBitmapResized =
@@ -63,7 +63,7 @@ public class ImageUtils
         return bitmap;
     }
 
-    public static SKBitmap RotateBitmap(SKBitmap bitmap, float angle)
+    private static SKBitmap RotateBitmap(SKBitmap bitmap, float angle)
     {
         var radians = MathF.PI * angle / 180;
         var sine = MathF.Abs(MathF.Sin(radians));
@@ -90,20 +90,18 @@ public class ImageUtils
         using var canvas = new SKCanvas(bitmap);
 
         using var paint = new SKPaint();
-        {
-            paint.IsAntialias = true;
-            paint.Color = rarityColor;
-            paint.Style = SKPaintStyle.Fill;
+        paint.IsAntialias = true;
+        paint.Color = rarityColor;
+        paint.Style = SKPaintStyle.Fill;
 
-            using var path = new SKPath();
-            path.MoveTo(0, imageInfo.Height - 5);
-            path.LineTo(imageInfo.Width, 0);
-            path.LineTo(imageInfo.Width, imageInfo.Height - 6);
-            path.LineTo(0, imageInfo.Height);
-            path.Close();
+        using var path = new SKPath();
+        path.MoveTo(0, imageInfo.Height - 5);
+        path.LineTo(imageInfo.Width, 0);
+        path.LineTo(imageInfo.Width, imageInfo.Height - 6);
+        path.LineTo(0, imageInfo.Height);
+        path.Close();
 
-            canvas.DrawPath(path, paint);
-        }
+        canvas.DrawPath(path, paint);
 
         return bitmap;
     }
