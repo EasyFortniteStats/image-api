@@ -643,22 +643,20 @@ public partial class ShopImageController(
         else
         {
             int resizeWidth, resizeHeight;
-            var aspectRatio = shopEntry.Image.Width / shopEntry.Image.Height;
+            var aspectRatio = (float)shopEntry.Image.Width / shopEntry.Image.Height;
 
             if (imageInfo.Width > imageInfo.Height)
             {
                 resizeWidth = imageInfo.Width;
-                resizeHeight = imageInfo.Width / aspectRatio;
+                resizeHeight = (int)(imageInfo.Width / aspectRatio);
             }
             else
             {
-                resizeWidth = imageInfo.Height * aspectRatio;
+                resizeWidth = (int)(imageInfo.Height / aspectRatio);
                 resizeHeight = imageInfo.Height;
             }
 
-            using var resizedImageBitmap =
-                shopEntry.Image.Resize(new SKImageInfo(resizeWidth, resizeHeight), SKFilterQuality.Medium) ??
-                shopEntry.Image.Copy();
+            using var resizedImageBitmap = shopEntry.Image.Resize(new SKImageInfo(resizeWidth, resizeHeight), SKFilterQuality.Medium);
 
             // Car bundles get centered in the middle of the card vertically
             if (shopEntry.ImageType == "car-bundle")
