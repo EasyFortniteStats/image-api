@@ -6,7 +6,7 @@ namespace EasyFortniteStats_ImageApi;
 
 public class SharedAssets
 {
-    private static readonly MemoryCacheEntryOptions CacheOptions = new() {Priority = CacheItemPriority.NeverRemove};
+    private static readonly MemoryCacheEntryOptions CacheOptions = new() { Priority = CacheItemPriority.NeverRemove };
     private static readonly SemaphoreSlim Semaphore = new(1);
     private readonly IMemoryCache _memoryCache;
 
@@ -88,17 +88,17 @@ public class SharedAssets
 
             unsafe
             {
-                var fileDataBuffer = NativeMemory.Alloc((nuint) fileSize);
-                fileDataBufferPtr = (nint) fileDataBuffer;
+                var fileDataBuffer = NativeMemory.Alloc((nuint)fileSize);
+                fileDataBufferPtr = (nint)fileDataBuffer;
                 fileDataBufferStream =
-                    new UnmanagedMemoryStream((byte*) fileDataBuffer, fileSize, fileSize, FileAccess.ReadWrite);
+                    new UnmanagedMemoryStream((byte*)fileDataBuffer, fileSize, fileSize, FileAccess.ReadWrite);
             }
 
             await fileStream.CopyToAsync(fileDataBufferStream);
 
             unsafe
             {
-                var data = SKData.Create(fileDataBufferPtr, (int) fileSize,
+                var data = SKData.Create(fileDataBufferPtr, (int)fileSize,
                     (address, _) => NativeMemory.Free(address.ToPointer()));
                 return data;
             }

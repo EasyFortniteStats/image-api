@@ -12,7 +12,7 @@ public class ImageUtils
     {
         Logger.LogDebug("MemoryCache: Disposing {Key} | Reason: {Reason}", key, reason);
         if (value is null) return;
-        var bmp = (SKBitmap) value;
+        var bmp = (SKBitmap)value;
         bmp.Dispose();
     }
 
@@ -31,8 +31,8 @@ public class ImageUtils
         discordTagTextPaint.MeasureText(username, ref discordTagTextBounds);
 
         var imageInfo = new SKImageInfo(
-            (int) Math.Min(discordTagTextBounds.Width + (10 + 2 * 15 + 50) * resizeFactor, 459 * resizeFactor),
-            (int) (62 * resizeFactor));
+            (int)Math.Min(discordTagTextBounds.Width + (10 + 2 * 15 + 50) * resizeFactor, 459 * resizeFactor),
+            (int)(62 * resizeFactor));
         var bitmap = new SKBitmap(imageInfo);
         using var canvas = new SKCanvas(bitmap);
 
@@ -42,14 +42,14 @@ public class ImageUtils
         discordBoxPaint.Color = new SKColor(88, 101, 242);
         canvas.DrawRoundRect(0, 0, imageInfo.Width, imageInfo.Height, discordBoxR, discordBoxR, discordBoxPaint);
 
-        var logoResizeWidth = (int) (50 * resizeFactor);
+        var logoResizeWidth = (int)(50 * resizeFactor);
         var discordLogoBitmap = await _assets.GetBitmap("Assets/Images/DiscordLogo.png"); // don't dispose
         // get height with the same aspect ratio
-        var logoResizeHeight = (int) (discordLogoBitmap!.Height * (logoResizeWidth / (float) discordLogoBitmap.Width));
+        var logoResizeHeight = (int)(discordLogoBitmap!.Height * (logoResizeWidth / (float)discordLogoBitmap.Width));
         var discordLogoBitmapResized =
             discordLogoBitmap.Resize(new SKImageInfo(logoResizeWidth, logoResizeHeight), SKFilterQuality.High);
         canvas.DrawBitmap(discordLogoBitmapResized, 10 * resizeFactor,
-            (float) (imageInfo.Height - discordLogoBitmapResized.Height) / 2);
+            (float)(imageInfo.Height - discordLogoBitmapResized.Height) / 2);
 
         while (discordTagTextBounds.Width + (10 + 2 * 15 + 50) * resizeFactor > imageInfo.Width)
         {
@@ -58,7 +58,7 @@ public class ImageUtils
         }
 
         canvas.DrawText(username, (10 + 15) * resizeFactor + discordLogoBitmapResized.Width,
-            (float) imageInfo.Height / 2 - discordTagTextBounds.MidY, discordTagTextPaint);
+            (float)imageInfo.Height / 2 - discordTagTextBounds.MidY, discordTagTextPaint);
 
         return bitmap;
     }
@@ -69,8 +69,8 @@ public class ImageUtils
         var sine = MathF.Abs(MathF.Sin(radians));
         var cosine = MathF.Abs(MathF.Cos(radians));
         int originalWidth = bitmap.Width, originalHeight = bitmap.Height;
-        var rotatedWidth = (int) (cosine * originalWidth + sine * originalHeight);
-        var rotatedHeight = (int) (cosine * originalHeight + sine * originalWidth);
+        var rotatedWidth = (int)(cosine * originalWidth + sine * originalHeight);
+        var rotatedHeight = (int)(cosine * originalHeight + sine * originalWidth);
 
         var rotatedBitmap = new SKBitmap(rotatedWidth, rotatedHeight);
         using var rotatedCanvas = new SKCanvas(rotatedBitmap);

@@ -90,7 +90,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
         using var boxPaint = new SKPaint();
         boxPaint.IsAntialias = true;
-        boxPaint.Color = SKColors.White.WithAlpha((int) (.2 * 255));
+        boxPaint.Color = SKColors.White.WithAlpha((int)(.2 * 255));
 
         var fortniteFont = await assets.GetFont("Assets/Fonts/Fortnite.ttf"); // don't dispose
         var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
@@ -120,7 +120,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
             using var overlayBoxPaint = new SKPaint();
             overlayBoxPaint.IsAntialias = true;
-            overlayBoxPaint.Color = SKColors.White.WithAlpha((int) (.2 * 255));
+            overlayBoxPaint.Color = SKColors.White.WithAlpha((int)(.2 * 255));
 
             var upperBoxRect = SKRect.Create(49, 159, 437, 158);
             var upperBox = new SKRoundRect(upperBoxRect);
@@ -130,7 +130,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
             using var splitPaint = new SKPaint();
             splitPaint.IsAntialias = true;
-            splitPaint.Color = SKColors.White.WithAlpha((int) (.5 * 255));
+            splitPaint.Color = SKColors.White.WithAlpha((int)(.5 * 255));
             canvas.DrawRoundRect(267, 192, 1, 77, 1, 1, splitPaint);
 
             var buildLogo = await assets.GetBitmap("Assets/Images/Stats/BuildLogo.png"); // don't dispose
@@ -204,7 +204,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
             using var battlePassBarBackgroundPaint = new SKPaint();
             battlePassBarBackgroundPaint.IsAntialias = true;
-            battlePassBarBackgroundPaint.Color = SKColors.White.WithAlpha((int) (.3 * 255));
+            battlePassBarBackgroundPaint.Color = SKColors.White.WithAlpha((int)(.3 * 255));
             canvas.DrawRoundRect(158, 483, 309, 20, 10, 10, battlePassBarBackgroundPaint);
         }
 
@@ -390,7 +390,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         using var rankProgressPaint = new SKPaint();
         using var rankProgressFont = new SKFont(segoeFont, 16);
         rankProgressPaint.IsAntialias = true;
-        rankProgressPaint.Color = SKColors.White.WithAlpha((int) (255 * 0.7));
+        rankProgressPaint.Color = SKColors.White.WithAlpha((int)(255 * 0.7));
 
         using var rankingPaint = new SKPaint();
         using var rankingFont = new SKFont(fortniteFont, 20);
@@ -432,20 +432,20 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
                 canvas.DrawBitmap(divisionIconBitmap, x - divisionIconBitmap!.Width / 2f, 109);
 
                 divisionFont.MeasureText(rankedStatsEntry.CurrentDivisionName, out textBounds);
-                canvas.DrawText(rankedStatsEntry.CurrentDivisionName, x - (int) (textBounds.Width / 2), 206 - textBounds.Top, divisionFont, divisionPaint);
+                canvas.DrawText(rankedStatsEntry.CurrentDivisionName, x - (int)(textBounds.Width / 2), 206 - textBounds.Top, divisionFont, divisionPaint);
                 if (rankedStatsEntry.Ranking == null)
                 {
                     const int maxBarWidth = 130, barHeight = 6;
-                    var progressText = $"{(int) (rankedStatsEntry.Progress * 100)}%";
+                    var progressText = $"{(int)(rankedStatsEntry.Progress * 100)}%";
                     rankProgressFont.MeasureText(progressText, out textBounds);
                     var barX = x - textBounds.Width / 2f - maxBarWidth / 2f;
 
                     using var barBackgroundPaint = new SKPaint();
                     barBackgroundPaint.IsAntialias = true;
-                    barBackgroundPaint.Color = SKColors.White.WithAlpha((int) (.2 * 255));
+                    barBackgroundPaint.Color = SKColors.White.WithAlpha((int)(.2 * 255));
                     canvas.DrawRoundRect(barX, 250, maxBarWidth, barHeight, 10, 10, barBackgroundPaint);
 
-                    var rankProgressBarWidth = (int) (maxBarWidth * rankedStatsEntry.Progress);
+                    var rankProgressBarWidth = (int)(maxBarWidth * rankedStatsEntry.Progress);
                     if (rankProgressBarWidth > 0)
                     {
                         rankProgressBarWidth = Math.Max(rankProgressBarWidth, barHeight);
@@ -468,7 +468,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
                 else
                 {
                     rankingFont.MeasureText(rankedStatsEntry.Ranking, out textBounds);
-                    canvas.DrawText(rankedStatsEntry.Ranking, x - (int) (textBounds.Width / 2), 245 - textBounds.Top, rankingFont, rankingPaint);
+                    canvas.DrawText(rankedStatsEntry.Ranking, x - (int)(textBounds.Width / 2), 245 - textBounds.Top, rankingFont, rankingPaint);
                 }
             }
 
@@ -519,13 +519,13 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             valueFont.MeasureText(stats.Playtime.Minutes, out textBounds);
             canvas.DrawText(stats.Playtime.Minutes, 213, 369 - textBounds.Top, valueFont, valuePaint);
 
-            var battlePassLevel = ((int) stats.BattlePassLevel).ToString();
+            var battlePassLevel = ((int)stats.BattlePassLevel).ToString();
             valueFont.MeasureText(battlePassLevel, out textBounds);
             canvas.DrawText(battlePassLevel, 70, 479 - textBounds.Top, valueFont, valuePaint);
 
             const int maxBarWidth = 309, barHeight = 20;
 
-            var battlePassBarWidth = (int) (maxBarWidth * (stats.BattlePassLevel - (int) stats.BattlePassLevel));
+            var battlePassBarWidth = (int)(maxBarWidth * (stats.BattlePassLevel - (int)stats.BattlePassLevel));
             if (battlePassBarWidth > 0)
             {
                 battlePassBarWidth = Math.Max(battlePassBarWidth, barHeight);

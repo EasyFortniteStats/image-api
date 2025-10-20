@@ -308,14 +308,14 @@ public partial class ShopImageController(
                 entryNamePaint.Color = SKColors.White;
 
                 SKRect entryNameTextBounds;
-                var nameLines = SplitNameText(shopEntry.Name, entryLocationData.Name.MaxWidth ?? 0, entryNameFont, entryNamePaint); 
+                var nameLines = SplitNameText(shopEntry.Name, entryLocationData.Name.MaxWidth ?? 0, entryNameFont, entryNamePaint);
                 if (nameLines.Length > 1)
                 {
-                    entryNameFont.MeasureText(nameLines[0], out entryNameTextBounds, entryNamePaint); 
+                    entryNameFont.MeasureText(nameLines[0], out entryNameTextBounds, entryNamePaint);
                     canvas.DrawText(nameLines[0], entryLocationData.Name.X, entryLocationData.Name.Y + entryNameTextBounds.Height - 33, entryNameFont, entryNamePaint);
                 }
 
-                entryNameFont.MeasureText(nameLines.Last(), out entryNameTextBounds, entryNamePaint); 
+                entryNameFont.MeasureText(nameLines.Last(), out entryNameTextBounds, entryNamePaint);
                 canvas.DrawText(nameLines.Last(), entryLocationData.Name.X, entryLocationData.Name.Y + entryNameTextBounds.Height, entryNameFont, entryNamePaint);
 
                 // Draw the shop entry price
@@ -716,7 +716,7 @@ public partial class ShopImageController(
     {
         var regex = NameSplitRegex();
         var matches = regex.Matches(text);
-        
+
         var currentLine = 0;
         var lines = new StringBuilder[] { new(), new() };
         foreach (Match match in matches)

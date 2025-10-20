@@ -221,9 +221,9 @@ public class AccountImageController(
             using var questionmarkFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf"), 256.0f);
             questionmarkPaint.IsAntialias = true;
             questionmarkPaint.Color = SKColors.White;
-            
+
             questionmarkFont.MeasureText("?", out var questionmarkTextBounds);
-            
+
             canvas.DrawText("?", (float)bitmap.Width / 2, (float)bitmap.Height / 2 + questionmarkTextBounds.Height / 2, SKTextAlign.Center, questionmarkFont, questionmarkPaint);
         }
 
