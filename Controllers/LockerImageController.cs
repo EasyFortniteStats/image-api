@@ -12,7 +12,8 @@ namespace EasyFortniteStats_ImageApi.Controllers;
 public class AccountImageController(
     IHttpClientFactory clientFactory,
     AsyncKeyedLocker<string> namedLock,
-    SharedAssets assets)
+    SharedAssets assets,
+    ILogger<AccountImageController> logger)
     : ControllerBase
 {
     private const string BASE_ITEM_IMAGE_PATH = "data/images/locker/items";
@@ -36,8 +37,9 @@ public class AccountImageController(
     [HttpPost]
     public async Task<IActionResult> Post(Locker locker, [FromQuery] bool? lossless)
     {
-        Console.WriteLine(
-            $"Locker image request | Name = {locker.PlayerName} | Locale = {locker.Locale} | Items = {locker.Items.Length}");
+        logger.LogInformation(
+            "Locker image request received | Name = {PlayerName} | Locale = {Locale} | Items = {Items}",
+            locker.PlayerName, locker.Locale, locker.Items.Length);
         var lockKey = $"locker_{locker.RequestId}";
         using (await namedLock.LockAsync(lockKey).ConfigureAwait(false))
         {
@@ -156,15 +158,17 @@ public class AccountImageController(
                     }
                     catch (HttpRequestException e2)
                     {
-                        Console.WriteLine(
-                            $"Failed to download image with status {e2.StatusCode} for {item.Name} ({item.ImageUrl}) ");
+                        logger.LogWarning(
+                            "Failed to download image with status {StatusCode} for {Name} ({ImageUrl}) ",
+                            e2.StatusCode, item.Name, item.ImageUrl);
                         itemImageBytes = null;
                     }
                 }
                 catch (HttpRequestException e)
                 {
-                    Console.WriteLine(
-                        $"Failed to download image with status {e.StatusCode} for {item.Name} ({item.ImageUrl}) ");
+                    logger.LogWarning(
+                        "Failed to download image with status {StatusCode} for {Name} ({ImageUrl}) ",
+                        e.StatusCode, item.Name, item.ImageUrl);
                     itemImageBytes = null;
                 }
 

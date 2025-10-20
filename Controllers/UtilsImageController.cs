@@ -8,7 +8,7 @@ namespace EasyFortniteStats_ImageApi.Controllers;
 
 [ApiController]
 [Route("utils")]
-public class UtilsImageController(SharedAssets assets) : ControllerBase
+public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageController> logger) : ControllerBase
 {
     [HttpGet("collectGarbage")]
     public IActionResult CollectGarbage()
@@ -20,7 +20,7 @@ public class UtilsImageController(SharedAssets assets) : ControllerBase
     [HttpPost("progressBar")]
     public async Task<IActionResult> GenerateProgressBar(ProgressBar progressBar)
     {
-        Console.WriteLine("Progress Bar request");
+        logger.LogInformation("Progress Bar request received");
         using var bitmap = new SKBitmap(568, 30);
         using var canvas = new SKCanvas(bitmap);
 
@@ -75,7 +75,7 @@ public class UtilsImageController(SharedAssets assets) : ControllerBase
     [HttpPost("drop")]
     public async Task<IActionResult> GenerateDropImage(Drop drop)
     {
-        Console.WriteLine("Drop Image request");
+        logger.LogInformation("Drop Image request received");
         var mapBitmap =
             await assets.GetBitmap(
                 $"data/images/map/{drop.Locale}.png"); // don't dispose TODO: Clear caching on bg change

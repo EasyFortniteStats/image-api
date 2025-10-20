@@ -9,13 +9,13 @@ namespace EasyFortniteStats_ImageApi.Controllers;
 
 [ApiController]
 [Route("stats")]
-public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> namedLock, SharedAssets assets)
+public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> namedLock, SharedAssets assets, ILogger<StatsImageController> logger)
     : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Post(Stats stats, StatsType type = StatsType.Normal)
     {
-        Console.WriteLine($"Stats image request | Name = {stats.PlayerName} | Type = {type}");
+        logger.LogInformation("Stats image request received | Name = {PlayerName} | Type = {Type}", stats.PlayerName, type);
         if (type == StatsType.Normal && stats.Teams == null)
             return BadRequest("Normal stats type requested but no team stats were provided.");
         if (type == StatsType.Competitive && stats.Competitive == null)

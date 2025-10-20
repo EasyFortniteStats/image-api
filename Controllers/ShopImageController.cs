@@ -15,7 +15,8 @@ public partial class ShopImageController(
     IMemoryCache cache,
     IHttpClientFactory clientFactory,
     AsyncKeyedLocker<string> namedLock,
-    SharedAssets assets)
+    SharedAssets assets,
+    ILogger<ShopImageController> logger)
     : ControllerBase
 {
     // Constants
@@ -55,7 +56,7 @@ public partial class ShopImageController(
     {
         locale ??= "en";
         var _isNewShop = isNewShop ?? false;
-        Console.WriteLine($"Item Shop image request | Locale = {locale} | New Shop = {_isNewShop}");
+        logger.LogInformation("Item Shop image request received | Locale = {Locale} | New Shop = {IsNewShop}", locale, _isNewShop);
         // Hash the section ids
         var templateHash = string.Join('-', shop.Sections.Select(x => x.Id)).GetHashCode().ToString();
 
@@ -64,10 +65,12 @@ public partial class ShopImageController(
 
         using (await namedLock.LockAsync("shop_template").ConfigureAwait(false))
         {
+            logger.LogDebug("Acquired shop template lock");
             templateBitmap = cache.Get<SKBitmap?>($"shop_template_bmp_{templateHash}");
             locationData = cache.Get<ShopSectionLocationData[]?>($"shop_location_data_{templateHash}");
             if (_isNewShop || templateBitmap is null)
             {
+                logger.LogDebug("Generating new shop template");
                 await PrefetchImages(shop);
                 var templateGenerationResult = await GenerateTemplate(shop);
                 templateBitmap = templateGenerationResult.Item2;
@@ -75,6 +78,7 @@ public partial class ShopImageController(
                 cache.Set($"shop_template_bmp_{templateHash}", templateBitmap, ShopImageCacheOptions);
                 cache.Set($"shop_location_data_{templateHash}", locationData, TimeSpan.FromMinutes(10));
             }
+            logger.LogDebug("Releasing shop template lock");
         }
 
         SKBitmap? localeTemplateBitmap;
@@ -82,12 +86,15 @@ public partial class ShopImageController(
         var lockName = $"shop_template_{locale}";
         using (await namedLock.LockAsync(lockName).ConfigureAwait(false))
         {
+            logger.LogDebug("Acquired locale shop template lock for locale {Locale}", locale);
             localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_template_{locale}_bmp");
             if (_isNewShop || localeTemplateBitmap == null)
             {
+                logger.LogDebug("Generating new locale shop template for locale {Locale}", locale);
                 localeTemplateBitmap = await GenerateLocaleTemplate(shop, templateBitmap, locationData!);
                 cache.Set($"shop_template_{locale}_bmp", localeTemplateBitmap, ShopImageCacheOptions);
             }
+            logger.LogDebug("Releasing locale shop template lock for locale {Locale}", locale);
         }
 
         using var localeTemplateBitmapCopy = localeTemplateBitmap.Copy();
@@ -102,7 +109,7 @@ public partial class ShopImageController(
     {
         locale ??= "en";
         var _isNewShop = isNewShop ?? false;
-        Console.WriteLine($"Item Shop section image request | Locale = {locale} | New Shop = {section.Id}");
+        logger.LogInformation("Item Shop section image request received | Locale = {Locale} | New Shop = {SectionId}", locale, section.Id);
 
         SKBitmap? templateBitmap;
         ShopSectionLocationData? shopSectionLocationData;

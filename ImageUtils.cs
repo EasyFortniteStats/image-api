@@ -5,9 +5,12 @@ namespace EasyFortniteStats_ImageApi;
 
 public class ImageUtils
 {
+    private static readonly ILogger Logger =
+        LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<ImageUtils>();
+
     public static void BitmapPostEvictionCallback(object key, object? value, EvictionReason reason, object? state)
     {
-        Console.WriteLine($"MemoryCache: Disposing {key} | Reason: {reason}");
+        Logger.LogDebug("MemoryCache: Disposing {Key} | Reason: {Reason}", key, reason);
         if (value is null) return;
         var bmp = (SKBitmap) value;
         bmp.Dispose();
