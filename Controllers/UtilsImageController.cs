@@ -47,25 +47,28 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         }
 
         var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf");
+        var textBounds = new SKRect();
 
         using var textPaint = new SKPaint();
-        using var textFont = new SKFont(segoeFont, 20);
         textPaint.IsAntialias = true;
         textPaint.Color = SKColors.White;
+        textPaint.TextSize = 20;
+        textPaint.Typeface = segoeFont;
 
-        textFont.MeasureText(progressBar.Text, out var textBounds);
-        canvas.DrawText(progressBar.Text, 500 + 5, (float)bitmap.Height / 2 - textBounds.MidY, textFont, textPaint);
+        textPaint.MeasureText(progressBar.Text, ref textBounds);
+        canvas.DrawText(progressBar.Text, 500 + 5, (float)bitmap.Height / 2 - textBounds.MidY, textPaint);
 
         if (progressBar.BarText != null)
         {
             using var barTextPaint = new SKPaint();
-            using var barTextFont = new SKFont(segoeFont, 15);
             barTextPaint.IsAntialias = true;
             barTextPaint.Color = SKColors.White;
+            barTextPaint.TextSize = 15;
+            barTextPaint.Typeface = segoeFont;
 
-            barTextFont.MeasureText(progressBar.BarText, out textBounds);
+            barTextPaint.MeasureText(progressBar.BarText, ref textBounds);
             canvas.DrawText(progressBar.BarText, (500 - textBounds.Width) / 2,
-                 bitmap.Height / 2f - textBounds.MidY, barTextFont, barTextPaint);
+                bitmap.Height / 2f - textBounds.MidY, barTextPaint);
         }
 
         var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);

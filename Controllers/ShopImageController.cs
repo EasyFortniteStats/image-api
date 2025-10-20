@@ -221,8 +221,9 @@ public partial class ShopImageController(
         {
             using var backgroundImagePaint = new SKPaint();
             backgroundImagePaint.IsAntialias = true;
+            backgroundImagePaint.FilterQuality = SKFilterQuality.Medium;
 
-            using var resizedCustomBackgroundBitmap = backgroundBitmap.Resize(imageInfo, SKSamplingOptions.Default);
+            using var resizedCustomBackgroundBitmap = backgroundBitmap.Resize(imageInfo, SKFilterQuality.Medium);
             backgroundImagePaint.Shader = SKShader.CreateBitmap(resizedCustomBackgroundBitmap, SKShaderTileMode.Clamp,
                 SKShaderTileMode.Repeat);
 
@@ -234,10 +235,13 @@ public partial class ShopImageController(
         if (shop is { CreatorCode: not null, CreatorCodeTitle: not null })
         {
             using var shopTitlePaint = new SKPaint();
-            using var shopTitleFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf"), TITLE_FONT_SIZE);
             shopTitlePaint.IsAntialias = true;
+            shopTitlePaint.TextSize = TITLE_FONT_SIZE;
+            shopTitlePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf");
 
-            var shopTitleWidth = shopTitleFont.MeasureText(shop.Title);
+
+            var shopTitleWidth = shopTitlePaint.MeasureText(shop.Title);
+
 
             var maxBoxWidth = imageInfo.Width - 3 * HORIZONTAL_PADDING - shopTitleWidth;
             using var creatorCodeBoxBitmap =
@@ -263,22 +267,27 @@ public partial class ShopImageController(
 
         // Drawing the shop title
         using var shopTitlePaint = new SKPaint();
-        using var shopTitleFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf"), TITLE_FONT_SIZE);
         shopTitlePaint.IsAntialias = true;
+        shopTitlePaint.TextSize = TITLE_FONT_SIZE;
         shopTitlePaint.Color = SKColors.White;
+        shopTitlePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf");
 
-        var shopTitleWidth = shopTitleFont.MeasureText(shop.Title);
-        canvas.DrawText(shop.Title, 100, 50 - shopTitleFont.Metrics.Ascent, shopTitleFont, shopTitlePaint);
+        var shopTitleWidth = shopTitlePaint.MeasureText(shop.Title);
+        canvas.DrawText(shop.Title, 100, 50 - shopTitlePaint.FontMetrics.Ascent, shopTitlePaint);
 
         // Drawing the date
         using var datePaint = new SKPaint();
-        using var dateFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-86BoldItalic.otf"), DATE_FONT_SIZE);
         datePaint.IsAntialias = true;
+        datePaint.TextSize = DATE_FONT_SIZE;
         datePaint.Color = SKColors.White;
+        datePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-86BoldItalic.otf");
+        datePaint.TextAlign = SKTextAlign.Center;
+
         var datePoint = new SKPoint(
-            Math.Max(HORIZONTAL_PADDING + shopTitleWidth / 2f, HORIZONTAL_PADDING + dateFont.MeasureText(shop.Date) / 2),
-            313 - dateFont.Metrics.Ascent);
-        canvas.DrawText(shop.Date, datePoint, SKTextAlign.Center, dateFont, datePaint);
+            Math.Max(HORIZONTAL_PADDING + shopTitleWidth / 2f,
+                HORIZONTAL_PADDING + datePaint.MeasureText(shop.Date) / 2),
+            313 - datePaint.FontMetrics.Ascent);
+        canvas.DrawText(shop.Date, datePoint, datePaint);
 
         foreach (var sectionLocationData in shopSectionLocationData)
         {
@@ -288,13 +297,14 @@ public partial class ShopImageController(
             if (sectionLocationData.Name != null)
             {
                 using var sectionNamePaint = new SKPaint();
-                using var sectionNameFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-86BoldItalic.otf"), SECTION_NAME_FONT_SIZE);
                 sectionNamePaint.IsAntialias = true;
+                sectionNamePaint.TextSize = SECTION_NAME_FONT_SIZE;
                 sectionNamePaint.Color = SKColors.White;
+                sectionNamePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-86BoldItalic.otf");
 
                 var sectionNamePoint = new SKPoint(sectionLocationData.Name.X,
-                    sectionLocationData.Name.Y - sectionNameFont.Metrics.Ascent);
-                canvas.DrawText(shopSection?.Name, sectionNamePoint, sectionNameFont, sectionNamePaint);
+                    sectionLocationData.Name.Y - sectionNamePaint.FontMetrics.Ascent);
+                canvas.DrawText(shopSection?.Name, sectionNamePoint, sectionNamePaint);
             }
 
             foreach (var entryLocationData in sectionLocationData.Entries)
@@ -304,43 +314,49 @@ public partial class ShopImageController(
                     continue;
 
                 using var entryNamePaint = new SKPaint();
-                using var entryNameFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf"), ENTRY_NAME_FONT_SIZE);
+                entryNamePaint.IsAntialias = true;
+                entryNamePaint.TextSize = ENTRY_NAME_FONT_SIZE;
                 entryNamePaint.Color = SKColors.White;
+                entryNamePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf");
 
-                SKRect entryNameTextBounds;
-                var nameLines = SplitNameText(shopEntry.Name, entryLocationData.Name.MaxWidth ?? 0, entryNameFont, entryNamePaint);
+                var entryNameTextBounds = new SKRect();
+                var nameLines = SplitNameText(shopEntry.Name, entryLocationData.Name.MaxWidth ?? 0, entryNamePaint);
                 if (nameLines.Length > 1)
                 {
-                    entryNameFont.MeasureText(nameLines[0], out entryNameTextBounds, entryNamePaint);
-                    canvas.DrawText(nameLines[0], entryLocationData.Name.X, entryLocationData.Name.Y + entryNameTextBounds.Height - 33, entryNameFont, entryNamePaint);
+                    entryNamePaint.MeasureText(nameLines[0], ref entryNameTextBounds);
+                    canvas.DrawText(nameLines[0], entryLocationData.Name.X,
+                        entryLocationData.Name.Y + entryNameTextBounds.Height - 33, entryNamePaint);
                 }
 
-                entryNameFont.MeasureText(nameLines.Last(), out entryNameTextBounds, entryNamePaint);
-                canvas.DrawText(nameLines.Last(), entryLocationData.Name.X, entryLocationData.Name.Y + entryNameTextBounds.Height, entryNameFont, entryNamePaint);
+                entryNamePaint.MeasureText(nameLines.Last(), ref entryNameTextBounds);
+                canvas.DrawText(nameLines.Last(), entryLocationData.Name.X,
+                    entryLocationData.Name.Y + entryNameTextBounds.Height, entryNamePaint);
 
                 // Draw the shop entry price
                 using var pricePaint = new SKPaint();
-                using var priceFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf"), ENTRY_PRICE_FONT_SIZE);
                 pricePaint.IsAntialias = true;
+                pricePaint.TextSize = ENTRY_PRICE_FONT_SIZE;
                 pricePaint.Color = SKColors.White;
+                pricePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf");
 
-                var priceTextWidth = priceFont.MeasureText(shopEntry.FinalPrice);
+                var priceTextWidth = pricePaint.MeasureText(shopEntry.FinalPrice);
                 var pricePoint = new SKPoint(entryLocationData.Price.X,
-                    entryLocationData.Price.Y - priceFont.Metrics.Descent);
-                canvas.DrawText(shopEntry.FinalPrice, pricePoint, priceFont, pricePaint);
+                    entryLocationData.Price.Y - pricePaint.FontMetrics.Descent);
+                canvas.DrawText(shopEntry.FinalPrice, pricePoint, pricePaint);
 
                 // Draw strikeout old price if item is discounted
                 if (shopEntry.FinalPrice != shopEntry.RegularPrice)
                 {
                     using var oldPricePaint = new SKPaint();
-                    using var oldPriceFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf"), ENTRY_PRICE_FONT_SIZE);
                     oldPricePaint.IsAntialias = true;
+                    oldPricePaint.TextSize = ENTRY_PRICE_FONT_SIZE;
                     oldPricePaint.Color = SKColors.White.WithAlpha((int)(.6 * 255));
+                    oldPricePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf");
 
-                    var oldPriceTextWidth = oldPriceFont.MeasureText(shopEntry.RegularPrice);
+                    var oldPriceTextWidth = oldPricePaint.MeasureText(shopEntry.RegularPrice);
                     var oldPricePoint = new SKPoint(entryLocationData.Price.X + priceTextWidth + 9,
-                        entryLocationData.Price.Y - priceFont.Metrics.Descent);
-                    canvas.DrawText(shopEntry.RegularPrice, oldPricePoint, oldPriceFont, oldPricePaint);
+                        entryLocationData.Price.Y - pricePaint.FontMetrics.Descent);
+                    canvas.DrawText(shopEntry.RegularPrice, oldPricePoint, oldPricePaint);
 
                     // Draw the strikeout line
                     using var strikePaint = new SKPaint();
@@ -461,21 +477,26 @@ public partial class ShopImageController(
         creatorCode = $"{creatorCode} ";
 
         using var creatorCodeTitlePaint = new SKPaint();
-        using var creatorCodeTitleFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-76Bold.otf"), 100f);
         creatorCodeTitlePaint.IsAntialias = true;
+        creatorCodeTitlePaint.TextSize = 100f;
+        creatorCodeTitlePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-76Bold.otf");
         creatorCodeTitlePaint.Color = SKColors.Black;
 
         using var creatorCodePaint = new SKPaint();
-        using var creatorCodeFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-76Bold.otf"), 100f);
         creatorCodePaint.IsAntialias = true;
+        creatorCodePaint.TextSize = 100f;
+        creatorCodePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-76Bold.otf");
         creatorCodePaint.Color = new SKColor(178, 165, 255);
+        creatorCodePaint.TextAlign = SKTextAlign.Right;
 
-        float width = creatorCodeTitleFont.MeasureText(creatorCodeTitle) + creatorCodeTitleFont.MeasureText(creatorCode), height = 150f;
+        float width =
+                creatorCodeTitlePaint.MeasureText(creatorCodeTitle) + creatorCodeTitlePaint.MeasureText(creatorCode),
+            height = 150f;
         while (width > maxWidth)
         {
-            creatorCodeTitleFont.Size--;
-            creatorCodeFont.Size--;
-            width = creatorCodeTitleFont.MeasureText(creatorCodeTitle) + creatorCodeFont.MeasureText(creatorCode);
+            creatorCodeTitlePaint.TextSize--;
+            creatorCodePaint.TextSize--;
+            width = creatorCodeTitlePaint.MeasureText(creatorCodeTitle) + creatorCodePaint.MeasureText(creatorCode);
             height--;
         }
 
@@ -489,10 +510,10 @@ public partial class ShopImageController(
         boxPaint.Style = SKPaintStyle.Fill;
         canvas.DrawRoundRect(new SKRect(0, 0, imageInfo.Width, imageInfo.Height), 100, 100, boxPaint);
 
-        var y = (imageInfo.Height - creatorCodeFont.Spacing) / 2 - creatorCodeFont.Metrics.Ascent;
+        var y = (imageInfo.Height - creatorCodePaint.FontSpacing) / 2 - creatorCodePaint.FontMetrics.Ascent;
 
-        canvas.DrawText(creatorCodeTitle, 0, y, creatorCodeTitleFont, creatorCodeTitlePaint);
-        canvas.DrawText(creatorCode, imageInfo.Width, y, SKTextAlign.Right, creatorCodeFont, creatorCodePaint);
+        canvas.DrawText(creatorCodeTitle, 0, y, creatorCodeTitlePaint);
+        canvas.DrawText(creatorCode, imageInfo.Width, y, creatorCodePaint);
 
         return bitmap;
     }
@@ -500,11 +521,13 @@ public partial class ShopImageController(
     private async Task<SKBitmap> GenerateBanner(string text, IReadOnlyList<string> colors, int maxWidth)
     {
         using var bannerPaint = new SKPaint();
-        using var bannerFont = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-76BoldItalic.otf"), 17.0f);
         bannerPaint.IsAntialias = true;
+        bannerPaint.TextSize = 17.0f;
+        bannerPaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-76BoldItalic.otf");
         bannerPaint.Color = SKColor.Parse(colors[1]);
 
-        bannerFont.MeasureText(text, out var textBounds, bannerPaint);
+        var textBounds = new SKRect();
+        bannerPaint.MeasureText(text, ref textBounds);
         var maxTextWidth = maxWidth - 2 * 13;
 
         var imageInfo = new SKImageInfo(Math.Min(2 * 13 + (int)textBounds.Width, maxWidth), 34);
@@ -523,7 +546,7 @@ public partial class ShopImageController(
             while (textBounds.Width > maxTextWidth)
             {
                 text = text.Remove(text.Length - 1, 1);
-                bannerFont.MeasureText(text + "...", out textBounds);
+                bannerPaint.MeasureText(text + "...", ref textBounds);
             }
 
             text += "...";
@@ -531,7 +554,7 @@ public partial class ShopImageController(
 
 
         // 6 + textBounds.Top
-        canvas.DrawText(text, 13, (float)imageInfo.Height / 2 - textBounds.MidY, bannerFont, bannerPaint);
+        canvas.DrawText(text, 13, (float)imageInfo.Height / 2 - textBounds.MidY, bannerPaint);
 
         return bitmap;
     }
@@ -607,7 +630,7 @@ public partial class ShopImageController(
         // Scale image down to fit the card
         if (shopEntry is { ImageType: "track", ImageUrl: null })
         {
-            using var coverBitmap = shopEntry.Image.Resize(new SKImageInfo(236, 236), SKSamplingOptions.Default);
+            using var coverBitmap = shopEntry.Image.Resize(new SKImageInfo(236, 236), SKFilterQuality.Medium);
 
             using var roundedCoverBitmap = new SKBitmap(236, 236);
             using var roundedCoverCanvas = new SKCanvas(roundedCoverBitmap);
@@ -634,7 +657,7 @@ public partial class ShopImageController(
             }
 
             using var resizedImageBitmap =
-                shopEntry.Image.Resize(new SKImageInfo(resizeWidth, resizeHeight), SKSamplingOptions.Default) ??
+                shopEntry.Image.Resize(new SKImageInfo(resizeWidth, resizeHeight), SKFilterQuality.Medium) ??
                 shopEntry.Image;
 
             // Car bundles get centered in the middle of the card vertically
@@ -704,15 +727,18 @@ public partial class ShopImageController(
             using var paint = new SKPaint();
             using var font = new SKFont(await assets.GetFont("Assets/Fonts/Fortnite-74Regular.otf"), 35.0f);
             paint.IsAntialias = true;
+            paint.TextSize = 35.0f;
             paint.Color = SKColors.White;
+            paint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-74Regular.otf");
+            paint.TextAlign = SKTextAlign.Right;
 
-            canvas.DrawText("+", imageInfo.Width - 18, imageInfo.Height - font.Metrics.Descent + 3, SKTextAlign.Right, font, paint);
+            canvas.DrawText("+", imageInfo.Width - 18, imageInfo.Height - paint.FontMetrics.Descent + 3, paint);
         }
 
         return bitmap;
     }
 
-    private static string[] SplitNameText(string text, int maxWidth, SKFont font, SKPaint paint)
+    private static string[] SplitNameText(string text, int maxWidth, SKPaint paint)
     {
         var regex = NameSplitRegex();
         var matches = regex.Matches(text);
@@ -722,7 +748,8 @@ public partial class ShopImageController(
         foreach (Match match in matches)
         {
             var line = lines[currentLine];
-            font.MeasureText(line + match.Value, out var bounds, paint);
+            var bounds = new SKRect();
+            paint.MeasureText(line + match.Value, ref bounds);
             if (bounds.Width > maxWidth) currentLine++;
             if (currentLine >= 2)
             {
@@ -736,13 +763,14 @@ public partial class ShopImageController(
         // Adjust lines that are too long and add ellipsis
         foreach (var line in lines)
         {
-            font.MeasureText(line.ToString(), out var textBounds, paint);
+            var textBounds = new SKRect();
+            paint.MeasureText(line.ToString(), ref textBounds);
             if (textBounds.Width <= maxWidth) continue;
 
             while (textBounds.Width > maxWidth)
             {
                 line.Remove(line.Length - 1, 1);
-                font.MeasureText(line + "...", out textBounds);
+                paint.MeasureText(line + "...", ref textBounds);
             }
 
             line.Append("...");
