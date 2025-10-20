@@ -42,7 +42,7 @@ public class RankedStatsEntry
     public string HighestDivisionName { get; set; }
     public float Progress { get; set; }
     public string? Ranking { get; set; }
-    
+
     public bool isUnranked()
     {
         return CurrentDivision == 0 && HighestDivision == 0 && Progress == 0.0;

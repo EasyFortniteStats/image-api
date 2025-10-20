@@ -4,16 +4,10 @@ using SkiaSharp;
 
 namespace EasyFortniteStats_ImageApi;
 
-public class SharedAssets
+public class SharedAssets(IMemoryCache memoryCache)
 {
-    private static readonly MemoryCacheEntryOptions CacheOptions = new() {Priority = CacheItemPriority.NeverRemove};
+    private static readonly MemoryCacheEntryOptions CacheOptions = new() { Priority = CacheItemPriority.NeverRemove };
     private static readonly SemaphoreSlim Semaphore = new(1);
-    private readonly IMemoryCache _memoryCache;
-
-    public SharedAssets(IMemoryCache memoryCache)
-    {
-        _memoryCache = memoryCache;
-    }
 
     public async ValueTask<SKBitmap?> GetBitmap(string format, string? arg1)
     {
@@ -27,12 +21,12 @@ public class SharedAssets
         if (path is null) return null;
 
         var key = $"bmp_{path}";
-        var cached = _memoryCache.Get<SKBitmap?>(key);
+        var cached = memoryCache.Get<SKBitmap?>(key);
         if (cached is not null) return cached;
 
         await Semaphore.WaitAsync();
 
-        cached = _memoryCache.Get<SKBitmap?>(key);
+        cached = memoryCache.Get<SKBitmap?>(key);
         if (cached is not null)
         {
             Semaphore.Release();
@@ -41,14 +35,14 @@ public class SharedAssets
 
         if (!File.Exists(path))
         {
-            _memoryCache.Set(key, (SKBitmap?)null, CacheOptions);
+            memoryCache.Set(key, (SKBitmap?)null, CacheOptions);
             Semaphore.Release();
             return null;
         }
 
         using var data = await ReadToSkData(path); // TODO: test if should dispose
         var bitmap = SKBitmap.Decode(data);
-        _memoryCache.Set(key, bitmap, CacheOptions);
+        memoryCache.Set(key, bitmap, CacheOptions);
         Semaphore.Release();
         return bitmap;
     }
@@ -56,12 +50,12 @@ public class SharedAssets
     public async ValueTask<SKTypeface> GetFont(string path)
     {
         var key = $"font_{path}";
-        var cached = _memoryCache.Get<SKTypeface>(key);
+        var cached = memoryCache.Get<SKTypeface>(key);
         if (cached is not null) return cached;
 
         await Semaphore.WaitAsync();
 
-        cached = _memoryCache.Get<SKTypeface>(key);
+        cached = memoryCache.Get<SKTypeface>(key);
         if (cached is not null)
         {
             Semaphore.Release();
@@ -70,7 +64,7 @@ public class SharedAssets
 
         using var data = await ReadToSkData(path); // TODO: test if should dispose
         var typeface = SKTypeface.FromData(data);
-        _memoryCache.Set(key, typeface, CacheOptions);
+        memoryCache.Set(key, typeface, CacheOptions);
         Semaphore.Release();
         return typeface;
     }
@@ -88,17 +82,17 @@ public class SharedAssets
 
             unsafe
             {
-                var fileDataBuffer = NativeMemory.Alloc((nuint) fileSize);
-                fileDataBufferPtr = (nint) fileDataBuffer;
+                var fileDataBuffer = NativeMemory.Alloc((nuint)fileSize);
+                fileDataBufferPtr = (nint)fileDataBuffer;
                 fileDataBufferStream =
-                    new UnmanagedMemoryStream((byte*) fileDataBuffer, fileSize, fileSize, FileAccess.ReadWrite);
+                    new UnmanagedMemoryStream((byte*)fileDataBuffer, fileSize, fileSize, FileAccess.ReadWrite);
             }
 
             await fileStream.CopyToAsync(fileDataBufferStream);
 
             unsafe
             {
-                var data = SKData.Create(fileDataBufferPtr, (int) fileSize,
+                var data = SKData.Create(fileDataBufferPtr, (int)fileSize,
                     (address, _) => NativeMemory.Free(address.ToPointer()));
                 return data;
             }
