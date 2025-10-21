@@ -58,20 +58,16 @@ public class ShopSectionLocationData
     public ShopEntryLocationData[] Entries { get; }
 }
 
-public class ShopEntryLocationData
+public class ShopEntryLocationData(
+    string id,
+    ShopLocationDataEntry name,
+    ShopLocationDataEntry price,
+    ShopLocationDataEntry? banner)
 {
-    public ShopEntryLocationData(string id, ShopLocationDataEntry name, ShopLocationDataEntry price, ShopLocationDataEntry? banner)
-    {
-        Id = id;
-        Name = name;
-        Price = price;
-        Banner = banner;
-    }
-
-    public string Id { get; }
-    public ShopLocationDataEntry Name { get; }
-    public ShopLocationDataEntry Price { get; }
-    public ShopLocationDataEntry? Banner { get; }
+    public string Id { get; } = id;
+    public ShopLocationDataEntry Name { get; } = name;
+    public ShopLocationDataEntry Price { get; } = price;
+    public ShopLocationDataEntry? Banner { get; } = banner;
 }
 
 public class ShopLocationDataEntry

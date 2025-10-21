@@ -1,4 +1,4 @@
-﻿﻿// ReSharper disable InconsistentNaming
+﻿// ReSharper disable InconsistentNaming
 using SkiaSharp;
 
 namespace EasyFortniteStats_ImageApi;

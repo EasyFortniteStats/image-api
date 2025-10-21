@@ -14,7 +14,7 @@ public sealed class Locker : IDisposable
 
     public void Dispose()
     {
-        if (Items is not {Length: not 0})
+        if (Items is not { Length: not 0 })
             return;
 
         foreach (var item in Items)
