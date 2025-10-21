@@ -40,7 +40,7 @@ public class SharedAssets(IMemoryCache memoryCache)
             return null;
         }
 
-        using var data = await ReadToSkData(path); // TODO: test if should dispose
+        using var data = await ReadToSkData(path);
         var bitmap = SKBitmap.Decode(data);
         memoryCache.Set(key, bitmap, CacheOptions);
         Semaphore.Release();
@@ -62,7 +62,7 @@ public class SharedAssets(IMemoryCache memoryCache)
             return cached;
         }
 
-        using var data = await ReadToSkData(path); // TODO: test if should dispose
+        using var data = await ReadToSkData(path);
         var typeface = SKTypeface.FromData(data);
         memoryCache.Set(key, typeface, CacheOptions);
         Semaphore.Release();

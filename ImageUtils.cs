@@ -46,10 +46,13 @@ public class ImageUtils
         var discordLogoBitmap = await assets.GetBitmap("Assets/Images/DiscordLogo.png"); // don't dispose
         // get height with the same aspect ratio
         var logoResizeHeight = (int)(discordLogoBitmap!.Height * (logoResizeWidth / (float)discordLogoBitmap.Width));
-        var discordLogoBitmapResized =
-            discordLogoBitmap.Resize(new SKImageInfo(logoResizeWidth, logoResizeHeight), SKFilterQuality.High);
-        canvas.DrawBitmap(discordLogoBitmapResized, 10 * resizeFactor,
-            (float)(imageInfo.Height - discordLogoBitmapResized.Height) / 2);
+        var logoX = (int)(10f * resizeFactor);
+        var logoY = (int)((imageInfo.Height - logoResizeHeight) / 2f);
+
+        using var drawdiscordLogoPaint = new SKPaint();
+        drawdiscordLogoPaint.IsAntialias = true;
+        drawdiscordLogoPaint.FilterQuality = SKFilterQuality.High;
+        canvas.DrawBitmap(discordLogoBitmap, SKRect.Create(logoX, logoY, logoResizeWidth, logoResizeHeight), drawdiscordLogoPaint);
 
         while (discordTagTextBounds.Width + (10 + 2 * 15 + 50) * resizeFactor > imageInfo.Width)
         {
@@ -57,7 +60,7 @@ public class ImageUtils
             discordTagTextPaint.MeasureText(username, ref discordTagTextBounds);
         }
 
-        canvas.DrawText(username, (10 + 15) * resizeFactor + discordLogoBitmapResized.Width,
+        canvas.DrawText(username, (10 + 15) * resizeFactor + logoResizeWidth,
             (float)imageInfo.Height / 2 - discordTagTextBounds.MidY, discordTagTextPaint);
 
         return bitmap;

@@ -16,19 +16,21 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
     public async Task<IActionResult> Post(Stats stats, StatsType type = StatsType.Normal)
     {
         logger.LogInformation("Stats image request received | Name = {PlayerName} | Type = {Type}", stats.PlayerName, type);
-        if (type == StatsType.Normal && stats.Teams == null)
+        if (type == StatsType.Normal && stats.Teams is null)
             return BadRequest("Normal stats type requested but no team stats were provided.");
-        if (type == StatsType.Competitive && stats.Competitive == null)
+        if (type == StatsType.Competitive && stats.Competitive is null)
             return BadRequest("Competitive stats type requested but no competitive stats were provided.");
 
-        var backgroundHash = stats.BackgroundImagePath is not null ? $"_{stats.BackgroundImagePath.GetHashCode()}" : "";
+        var backgroundHash = stats.BackgroundImagePath is not null
+            ? $"_{stats.BackgroundImagePath.GetHashCode()}"
+            : "";
 
         var lockName = $"stats_{type}{backgroundHash}_template_mutex";
         SKBitmap? templateBitmap;
         using (await namedLock.LockAsync(lockName).ConfigureAwait(false))
         {
             cache.TryGetValue($"stats_{type}{backgroundHash}_template_image", out templateBitmap);
-            if (templateBitmap == null)
+            if (templateBitmap is null)
             {
                 templateBitmap = await GenerateTemplate(stats, type);
                 cache.Set($"stats_{type}{backgroundHash}_template_image", templateBitmap);
@@ -43,7 +45,9 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
     private async Task<SKBitmap> GenerateTemplate(Stats stats, StatsType type)
     {
-        var imageInfo = type == StatsType.Competitive ? new SKImageInfo(1505, 624) : new SKImageInfo(1505, 777);
+        var imageInfo = type == StatsType.Competitive
+            ? new SKImageInfo(1505, 624)
+            : new SKImageInfo(1505, 777);
 
         var bitmap = new SKBitmap(imageInfo);
         using var canvas = new SKCanvas(bitmap);
@@ -53,7 +57,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
                 stats.BackgroundImagePath); // don't dispose TODO: Clear caching on bg change
         if (customBackgroundBitmap is null)
         {
-            using var backgroundPaint = new SKPaint();
+            using var backgroundPaint = new SKPaintSafe();
             backgroundPaint.IsAntialias = true;
             backgroundPaint.Shader = SKShader.CreateRadialGradient(
                 new SKPoint(imageInfo.Rect.MidX, imageInfo.Rect.MidY),
@@ -65,7 +69,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         }
         else
         {
-            using var backgroundImagePaint = new SKPaint();
+            using var backgroundImagePaint = new SKPaintSafe();
             backgroundImagePaint.IsAntialias = true;
             backgroundImagePaint.FilterQuality = SKFilterQuality.Medium;
 
@@ -453,7 +457,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
                 canvas.DrawText(rankedStatsEntry.CurrentDivisionName, x - (int)(textBounds.Width / 2),
                     206 - textBounds.Top, divisionPaint);
 
-                if (rankedStatsEntry.Ranking == null)
+                if (rankedStatsEntry.Ranking is null)
                 {
                     const int maxBarWidth = 130, barHeight = 6;
                     var progressText = $"{(int)(rankedStatsEntry.Progress * 100)}%";
@@ -469,7 +473,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
                     if (rankProgressBarWidth > 0)
                     {
                         rankProgressBarWidth = Math.Max(rankProgressBarWidth, barHeight);
-                        using var battlePassBarPaint = new SKPaint();
+                        using var battlePassBarPaint = new SKPaintSafe();
                         battlePassBarPaint.IsAntialias = true;
                         battlePassBarPaint.Shader = SKShader.CreateLinearGradient(
                             new SKPoint(barX, 0),
@@ -550,7 +554,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             if (battlePassBarWidth > 0)
             {
                 battlePassBarWidth = Math.Max(battlePassBarWidth, barHeight);
-                using var battlePassBarPaint = new SKPaint();
+                using var battlePassBarPaint = new SKPaintSafe();
                 battlePassBarPaint.IsAntialias = true;
                 battlePassBarPaint.Shader = SKShader.CreateLinearGradient(
                     new SKPoint(158, 0),
@@ -641,7 +645,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         valuePaint.MeasureText(stats.Squads.Top6, ref textBounds);
         canvas.DrawText(stats.Squads.Top6, 1316, 518 - textBounds.Top, valuePaint);
 
-        if (type == StatsType.Normal && stats.Teams != null)
+        if (type == StatsType.Normal && stats.Teams is not null)
         {
             valuePaint.MeasureText(stats.Teams.MatchesPlayed, ref textBounds);
             canvas.DrawText(stats.Teams.MatchesPlayed, 537, 671 - textBounds.Top, valuePaint);
@@ -662,6 +666,8 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         return bitmap;
     }
 
+    private static readonly SKImageFilter _blurredFilter = SKImageFilter.CreateBlur(5, 5);
+
     private static void DrawBlurredRoundRect(SKBitmap bitmap, SKRoundRect rect)
     {
         using var canvas = new SKCanvas(bitmap);
@@ -670,7 +676,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
         using var paint = new SKPaint();
         paint.IsAntialias = true;
-        paint.ImageFilter = SKImageFilter.CreateBlur(5, 5);
+        paint.ImageFilter = _blurredFilter;
 
         canvas.DrawBitmap(bitmap, 0, 0, paint);
     }
