@@ -43,7 +43,7 @@ public class AccountImageController(
 
         using (await namedLock.LockAsync($"locker_{locker.RequestId}", cancellationToken).ConfigureAwait(false))
         {
-            await GenerateItemCards(locker);
+            await GenerateItemCards(locker, cancellationToken);
         }
 
         using (locker)
