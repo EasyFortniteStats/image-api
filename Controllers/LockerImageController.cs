@@ -174,14 +174,16 @@ public class AccountImageController(
                     }
                     catch (HttpRequestException e2)
                     {
-                        Console.WriteLine(
-                            $"Failed to download image with status {e2.StatusCode} for {item.Name} ({item.ImageUrl}) ");
+                        logger.LogWarning(
+                            "Failed to download image with status {HttpStatusCode} for {ItemName} ({ItemImageUrl}) ", 
+                            e2.StatusCode, item.Name, item.ImageUrl);
                     }
                 }
                 catch (HttpRequestException e)
                 {
-                    Console.WriteLine(
-                        $"Failed to download image with status {e.StatusCode} for {item.Name} ({item.ImageUrl}) ");
+                    logger.LogWarning(
+                        "Failed to download image with status {HttpStatusCode} for {ItemName} ({ItemImageUrl}) ", 
+                        e.StatusCode, item.Name, item.ImageUrl);
                 }
             }
 
