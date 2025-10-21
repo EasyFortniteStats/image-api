@@ -35,22 +35,28 @@ public class AccountImageController(
     };
 
     [HttpPost]
-    public async Task<IActionResult> Post(Locker locker, [FromQuery] bool? lossless)
+    public async Task<IActionResult> Post(Locker locker, [FromQuery] bool? lossless, CancellationToken cancellationToken)
     {
         logger.LogInformation(
             "Locker image request received | Name = {PlayerName} | Locale = {Locale} | Items = {Items}",
             locker.PlayerName, locker.Locale, locker.Items.Length);
-        var lockKey = $"locker_{locker.RequestId}";
-        using (await namedLock.LockAsync(lockKey).ConfigureAwait(false))
+
+        using (await namedLock.LockAsync($"locker_{locker.RequestId}", cancellationToken).ConfigureAwait(false))
         {
             await GenerateItemCards(locker);
         }
 
-        using var lockerBitmap = await GenerateImage(locker);
+        using (locker)
+        {
+            using var lockerBitmap = await GenerateImage(locker);
 
-        // Determine the quality of the image based on quality mapping and locker.Items.Length
-        var quality = lossless == true ? 100 : QualityMapping.FirstOrDefault(x => locker.Items.Length <= x.Count).Quality;
-        return File(lockerBitmap.Encode(SKEncodedImageFormat.Jpeg, quality).AsStream(true), "image/jpeg");
+            // Determine the quality of the image based on quality mapping and locker.Items.Length
+            var quality = lossless == true
+                ? 100
+                : QualityMapping.FirstOrDefault(x => locker.Items.Length <= x.Count).Quality;
+            var data = lockerBitmap.Encode(SKEncodedImageFormat.Jpeg, quality);
+            return File(data.AsStream(true), "image/jpeg");
+        }
     }
 
     private async Task<SKBitmap> GenerateImage(Locker locker)
@@ -70,7 +76,7 @@ public class AccountImageController(
         var bitmap = new SKBitmap(imageInfo);
         using var canvas = new SKCanvas(bitmap);
 
-        using var backgroundPaint = new SKPaint();
+        using var backgroundPaint = new SKPaintSafe();
         backgroundPaint.IsAntialias = true;
         backgroundPaint.Shader = SKShader.CreateLinearGradient(
             new SKPoint((float)imageInfo.Width / 2, 0),
@@ -84,10 +90,12 @@ public class AccountImageController(
         var textBounds = new SKRect();
         var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
 
-        var icon = await assets.GetBitmap("Assets/Images/Locker/Icon.png"); // don't dispose
+        var iconBitmap = await assets.GetBitmap("Assets/Images/Locker/Icon.png"); // don't dispose
         var resize = (int)(50 * uiResizingFactor);
-        using var resizeIcon = icon!.Resize(new SKImageInfo(resize, resize), SKFilterQuality.High);
-        canvas.DrawBitmap(resizeIcon, 50, 50);
+        using var drawIconPaint = new SKPaint();
+        drawIconPaint.IsAntialias = true;
+        drawIconPaint.FilterQuality = SKFilterQuality.High;
+        canvas.DrawBitmap(iconBitmap, SKRect.Create(50, 50, resize, resize), drawIconPaint);
 
         using var splitPaint = new SKPaint();
         splitPaint.IsAntialias = true;
@@ -95,7 +103,7 @@ public class AccountImageController(
 
         var splitWidth = 5 * uiResizingFactor;
         var splitR = 3 * uiResizingFactor;
-        canvas.DrawRoundRect(50 + resizeIcon.Width + splitWidth, 57, splitWidth, 50 * uiResizingFactor, splitR, splitR,
+        canvas.DrawRoundRect(50 + resize + splitWidth, 57, splitWidth, 50 * uiResizingFactor, splitR, splitR,
             splitPaint);
 
         using var namePaint = new SKPaint();
@@ -106,7 +114,7 @@ public class AccountImageController(
         namePaint.FilterQuality = SKFilterQuality.Medium;
 
         namePaint.MeasureText(locker.PlayerName, ref textBounds);
-        canvas.DrawText(locker.PlayerName, 50 + resizeIcon.Width + splitWidth * 3, 58 - textBounds.Top, namePaint);
+        canvas.DrawText(locker.PlayerName, 50 + resize + splitWidth * 3, 58 - textBounds.Top, namePaint);
 
         using var discordBoxBitmap = await ImageUtils.GenerateDiscordBox(assets, locker.UserName, uiResizingFactor);
         canvas.DrawBitmap(discordBoxBitmap, imageInfo.Width - 50 - discordBoxBitmap.Width, 39);
@@ -119,7 +127,6 @@ public class AccountImageController(
                 item.Image,
                 50 + 256 * column + 25 * column,
                 50 + nameFontSize + 50 + row * 313 + row * 25);
-            item.Image?.Dispose();
             column++;
             if (column != columns) continue;
             column = 0;
@@ -134,20 +141,26 @@ public class AccountImageController(
         return bitmap;
     }
 
-    private async Task GenerateItemCards(Locker locker)
+    private async Task GenerateItemCards(Locker locker, CancellationToken cancellationToken)
     {
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount / 2
+            MaxDegreeOfParallelism = Environment.ProcessorCount / 2,
+            CancellationToken = cancellationToken
         };
+        using var client = clientFactory.CreateClient();
         await Parallel.ForEachAsync(locker.Items, options, async (item, token) =>
         {
             var filePath = Path.Combine(BASE_ITEM_IMAGE_PATH, $"{item.Id}.png");
-            SKBitmap? itemImage = null;
-            if (!System.IO.File.Exists(filePath) && item.ImageUrl is not null)
+            var fileExists = System.IO.File.Exists(filePath);
+
+            byte[]? itemImageBytes = null;
+            if (fileExists)
             {
-                using var client = clientFactory.CreateClient();
-                byte[]? itemImageBytes;
+                itemImageBytes = await System.IO.File.ReadAllBytesAsync(filePath, token);
+            }
+            else if (item.ImageUrl is not null)
+            {
                 try
                 {
                     var imageUrl = changeUrlImageSize(item.ImageUrl, 256);
@@ -161,46 +174,50 @@ public class AccountImageController(
                     }
                     catch (HttpRequestException e2)
                     {
-                        logger.LogWarning(
-                            "Failed to download image with status {StatusCode} for {Name} ({ImageUrl}) ",
-                            e2.StatusCode, item.Name, item.ImageUrl);
-                        itemImageBytes = null;
+                        Console.WriteLine(
+                            $"Failed to download image with status {e2.StatusCode} for {item.Name} ({item.ImageUrl}) ");
                     }
                 }
                 catch (HttpRequestException e)
                 {
-                    logger.LogWarning(
-                        "Failed to download image with status {StatusCode} for {Name} ({ImageUrl}) ",
-                        e.StatusCode, item.Name, item.ImageUrl);
-                    itemImageBytes = null;
+                    Console.WriteLine(
+                        $"Failed to download image with status {e.StatusCode} for {item.Name} ({item.ImageUrl}) ");
+                }
+            }
+
+            SKBitmap? itemImage = null;
+
+            if (itemImageBytes is not null)
+            {
+                var itemImageRaw = SKBitmap.Decode(itemImageBytes);
+                if (itemImageRaw.Width != 256 || itemImageRaw.Height != 256)
+                {
+                    fileExists = false;
+                    var resized = itemImageRaw.Resize(new SKImageInfo(256, 256), SKFilterQuality.Medium);
+                    itemImageRaw.Dispose();
+                    itemImage = resized;
+                }
+                else
+                {
+                    itemImage = itemImageRaw;
                 }
 
-                if (itemImageBytes is not null)
+                if (!fileExists)
                 {
-                    var itemImageRaw = SKBitmap.Decode(itemImageBytes);
-                    if (itemImageRaw.Width != 256 || itemImageRaw.Height != 256)
-                    {
-                        itemImage = itemImageRaw.Resize(new SKImageInfo(256, 256), SKFilterQuality.Medium);
-                    }
-                    else
-                    {
-                        itemImage = itemImageRaw;
-                    }
-
                     Directory.CreateDirectory(BASE_ITEM_IMAGE_PATH);
+                    using var data = itemImage.Encode(SKEncodedImageFormat.Png, 100);
+                    var dataBytes = data.AsSpan().ToArray();
                     await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write,
                         FileShare.None, 4096, true);
-                    using var data = itemImage.Encode(SKEncodedImageFormat.Png, 100);
-                    data.SaveTo(fileStream);
+                    fileStream.SetLength(dataBytes.LongLength);
+                    await fileStream.WriteAsync(dataBytes, token);
                 }
             }
-            else if (System.IO.File.Exists(filePath))
-            {
-                itemImage = SKBitmap.Decode(filePath);
-            }
 
-            item.Image = await GenerateItemCard(item, itemImage);
-            itemImage?.Dispose();
+            using (itemImage)
+            {
+                item.Image = await GenerateItemCard(item, itemImage);
+            }
         });
     }
 
@@ -309,9 +326,11 @@ public class AccountImageController(
         using var canvas = new SKCanvas(bitmap);
 
         var logoBitmap = await assets.GetBitmap("Assets/Images/Logo.png"); // don't dispose
-        var logoBitmapResize =
-            logoBitmap!.Resize(new SKImageInfo(imageInfo.Height, imageInfo.Height), SKFilterQuality.High);
-        canvas.DrawBitmap(logoBitmapResize, new SKPoint(0, 0));
+
+        using var drawLogoPaint = new SKPaint();
+        drawLogoPaint.IsAntialias = true;
+        drawLogoPaint.FilterQuality = SKFilterQuality.High;
+        canvas.DrawBitmap(logoBitmap, SKRect.Create(0, 0, imageInfo.Height, imageInfo.Height), drawLogoPaint);
 
         var splitR = 3 * resizeFactor;
 

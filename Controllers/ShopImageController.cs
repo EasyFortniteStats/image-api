@@ -52,7 +52,9 @@ public partial class ShopImageController(
     };
 
     [HttpPost]
-    public async Task<IActionResult> Shop([FromBody] Shop shop, [FromQuery] string? locale, [FromQuery] bool? isNewShop)
+    public async Task<IActionResult> Shop(
+        [FromBody] Shop shop, [FromQuery] string? locale, [FromQuery] bool? isNewShop,
+        CancellationToken cancellationToken)
     {
         locale ??= "en";
         var _isNewShop = isNewShop ?? false;
@@ -63,7 +65,7 @@ public partial class ShopImageController(
         SKBitmap? templateBitmap;
         ShopSectionLocationData[]? locationData;
 
-        using (await namedLock.LockAsync("shop_template").ConfigureAwait(false))
+        using (await namedLock.LockAsync("shop_template", cancellationToken).ConfigureAwait(false))
         {
             logger.LogDebug("Acquired shop template lock");
             templateBitmap = cache.Get<SKBitmap?>($"shop_template_bmp_{templateHash}");
@@ -71,7 +73,7 @@ public partial class ShopImageController(
             if (_isNewShop || templateBitmap is null)
             {
                 logger.LogDebug("Generating new shop template");
-                await PrefetchImages(shop);
+                await PrefetchImages(shop, cancellationToken);
                 var templateGenerationResult = await GenerateTemplate(shop);
                 templateBitmap = templateGenerationResult.Item2;
                 locationData = templateGenerationResult.Item1;
@@ -84,7 +86,7 @@ public partial class ShopImageController(
         SKBitmap? localeTemplateBitmap;
 
         var lockName = $"shop_template_{locale}";
-        using (await namedLock.LockAsync(lockName).ConfigureAwait(false))
+        using (await namedLock.LockAsync(lockName, cancellationToken).ConfigureAwait(false))
         {
             logger.LogDebug("Acquired locale shop template lock for locale {Locale}", locale);
             localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_template_{locale}_bmp");
@@ -104,8 +106,9 @@ public partial class ShopImageController(
     }
 
     [HttpPost("section")]
-    public async Task<IActionResult> ShopSection([FromBody] ShopSection section, [FromQuery] string? locale,
-        [FromQuery] bool? isNewShop)
+    public async Task<IActionResult> ShopSection(
+        [FromBody] ShopSection section, [FromQuery] string? locale, [FromQuery] bool? isNewShop,
+        CancellationToken cancellationToken)
     {
         locale ??= "en";
         var _isNewShop = isNewShop ?? false;
@@ -114,13 +117,13 @@ public partial class ShopImageController(
         SKBitmap? templateBitmap;
         ShopSectionLocationData? shopSectionLocationData;
 
-        using (await namedLock.LockAsync($"shop_section_template_{section.Id}").ConfigureAwait(false))
+        using (await namedLock.LockAsync($"shop_section_template_{section.Id}", cancellationToken).ConfigureAwait(false))
         {
             templateBitmap = cache.Get<SKBitmap?>($"shop_section_template_bmp_{section.Id}");
             shopSectionLocationData = cache.Get<ShopSectionLocationData?>($"shop_section_location_data_{section.Id}");
             if (_isNewShop || templateBitmap is null)
             {
-                await PrefetchImages([section]);
+                await PrefetchImages([section], cancellationToken);
                 var templateGenerationResult = await GenerateSectionTemplate(section);
                 templateBitmap = templateGenerationResult.Item2;
                 shopSectionLocationData = templateGenerationResult.Item1;
@@ -133,7 +136,7 @@ public partial class ShopImageController(
         SKBitmap? localeTemplateBitmap;
 
         var lockName = $"shop_section_template_{locale}_{section.Id}";
-        using (await namedLock.LockAsync(lockName).ConfigureAwait(false))
+        using (await namedLock.LockAsync(lockName, cancellationToken).ConfigureAwait(false))
         {
             localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_section_template_{locale}_bmp_{section.Id}");
             if (_isNewShop || localeTemplateBitmap == null)
@@ -151,18 +154,20 @@ public partial class ShopImageController(
         return File(data.AsStream(true), "image/png");
     }
 
-    private async Task PrefetchImages(Shop shop)
+    private Task PrefetchImages(Shop shop, CancellationToken cancellationToken)
     {
-        await PrefetchImages(shop.Sections);
+        return PrefetchImages(shop.Sections, cancellationToken);
     }
 
-    private async Task PrefetchImages(IEnumerable<ShopSection> sections)
+    private async Task PrefetchImages(IReadOnlyList<ShopSection> sections, CancellationToken cancellationToken)
     {
         var entries = sections.SelectMany(x => x.Entries);
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount / 2
+            MaxDegreeOfParallelism = Environment.ProcessorCount / 2,
+            CancellationToken = cancellationToken
         };
+        using var client = clientFactory.CreateClient();
         await Parallel.ForEachAsync(entries, options, async (entry, token) =>
         {
             var cacheKey = $"shop_image_{entry.Id}";
@@ -175,7 +180,6 @@ public partial class ShopImageController(
                     return;
                 }
 
-                using var client = clientFactory.CreateClient();
                 var url = entry.ImageUrl ?? entry.FallbackImageUrl;
                 SKBitmap bitmap;
 
@@ -205,7 +209,7 @@ public partial class ShopImageController(
         var backgroundBitmap = await assets.GetBitmap("data/images/{0}", shop.BackgroundImagePath); // don't dispose
         if (backgroundBitmap is null)
         {
-            using var paint = new SKPaint();
+            using var paint = new SKPaintSafe();
             paint.IsAntialias = true;
             paint.IsDither = true;
             paint.Shader = SKShader.CreateLinearGradient(
@@ -219,7 +223,7 @@ public partial class ShopImageController(
         }
         else
         {
-            using var backgroundImagePaint = new SKPaint();
+            using var backgroundImagePaint = new SKPaintSafe();
             backgroundImagePaint.IsAntialias = true;
             backgroundImagePaint.FilterQuality = SKFilterQuality.Medium;
 
@@ -438,7 +442,7 @@ public partial class ShopImageController(
                     position += entry.Size;
 
                     using var itemCardBitmap = await GenerateItemCard(entry);
-                    using var itemCardPaint = new SKPaint();
+                    using var itemCardPaint = new SKPaintSafe();
                     itemCardPaint.IsAntialias = true;
                     itemCardPaint.Shader = SKShader.CreateBitmap(itemCardBitmap, SKShaderTileMode.Clamp,
                         SKShaderTileMode.Clamp, SKMatrix.CreateTranslation(entryX, entryY));
@@ -573,7 +577,7 @@ public partial class ShopImageController(
 
         if (shopEntry.BackgroundColors != null)
         {
-            using var backgroundGradientPaint = new SKPaint();
+            using var backgroundGradientPaint = new SKPaintSafe();
             backgroundGradientPaint.IsAntialias = true;
             backgroundGradientPaint.IsDither = true;
             switch (shopEntry.BackgroundColors.Length)
@@ -616,7 +620,7 @@ public partial class ShopImageController(
         else if (shopEntry.ImageUrl == null)
         {
             // Draw radial gradient and paste resizedImageBitmap on it
-            using var gradientPaint = new SKPaint();
+            using var gradientPaint = new SKPaintSafe();
             gradientPaint.IsAntialias = true;
             gradientPaint.Shader = SKShader.CreateRadialGradient(
                 new SKPoint(imageInfo.Rect.MidX, imageInfo.Rect.MidY),
@@ -685,7 +689,7 @@ public partial class ShopImageController(
         if (shopEntry.TextBackgroundColor != null)
         {
             var textBackgroundColor = ImageUtils.ParseColor(shopEntry.TextBackgroundColor);
-            using var shadowPaint = new SKPaint();
+            using var shadowPaint = new SKPaintSafe();
             shadowPaint.IsAntialias = true;
             shadowPaint.IsDither = true;
             shadowPaint.Shader = SKShader.CreateLinearGradient(
@@ -701,7 +705,7 @@ public partial class ShopImageController(
         }
         else if (shopEntry.ImageType == "track")
         {
-            using var shadowPaint = new SKPaint();
+            using var shadowPaint = new SKPaintSafe();
             shadowPaint.IsAntialias = true;
             shadowPaint.IsDither = true;
             shadowPaint.Shader = SKShader.CreateLinearGradient(
