@@ -4,7 +4,6 @@ using EasyFortniteStats_ImageApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
 builder.Services.AddEndpointsApiExplorer();
@@ -13,8 +12,8 @@ builder.Services.AddSingleton<SharedAssets>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton(new AsyncKeyedLocker<string>(o =>
 {
-    o.PoolSize = 20;
-    o.PoolInitialFill = 1;
+    o.PoolSize = 64;
+    o.PoolInitialFill = -1;
 }));
 
 var app = builder.Build();

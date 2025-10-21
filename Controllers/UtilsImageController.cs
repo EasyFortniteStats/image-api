@@ -34,7 +34,7 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         if (barWidth > 0)
         {
             barWidth = barWidth < 20 ? 20 : barWidth;
-            using var barPaint = new SKPaint();
+            using var barPaint = new SKPaintSafe();
             barPaint.IsAntialias = true;
             barPaint.Shader = SKShader.CreateLinearGradient(
                 new SKPoint(0, 0),
@@ -56,7 +56,7 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         textPaint.Typeface = segoeFont;
 
         textPaint.MeasureText(progressBar.Text, ref textBounds);
-        canvas.DrawText(progressBar.Text, 500 + 5, (float)bitmap.Height / 2 - textBounds.MidY, textPaint);
+        canvas.DrawText(progressBar.Text, 500 + 5, bitmap.Height / 2f - textBounds.MidY, textPaint);
 
         if (progressBar.BarText != null)
         {
@@ -67,7 +67,7 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
             barTextPaint.Typeface = segoeFont;
 
             barTextPaint.MeasureText(progressBar.BarText, ref textBounds);
-            canvas.DrawText(progressBar.BarText, (500 - textBounds.Width) / 2,
+            canvas.DrawText(progressBar.BarText, (500 - textBounds.Width) / 2f,
                 bitmap.Height / 2f - textBounds.MidY, barTextPaint);
         }
 
@@ -78,18 +78,15 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
     [HttpPost("drop")]
     public async Task<IActionResult> GenerateDropImage(Drop drop)
     {
-        logger.LogInformation("Drop Image request received");
-        var mapBitmap =
-            await assets.GetBitmap(
-                $"data/images/map/{drop.Locale}.png"); // don't dispose TODO: Clear caching on bg change
+        logger.LogInformation("Drop Image request received | Locale = {DropLocale}", drop.Locale);
 
-        if (mapBitmap == null)
+        var filePath = $"data/images/map/{drop.Locale}.png";
+        if (!System.IO.File.Exists(filePath))
             return BadRequest("Map file doesn't exist.");
 
-        var bitmap = new SKBitmap(mapBitmap.Width, mapBitmap.Height);
+        var mapBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+        using var bitmap = SKBitmap.Decode(mapBytes);
         using var canvas = new SKCanvas(bitmap);
-
-        canvas.DrawBitmap(mapBitmap, 0, 0);
 
         var markerAmount = Directory.EnumerateFiles("Assets/Images/Map/Markers", "*.png").Count();
         var markerBitmap =
@@ -103,7 +100,7 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         var mx = (drop.X + worldRadius) / (worldRadius * 2f) * bitmap.Width + xOffset;
         var my = (drop.Y + worldRadius) / (worldRadius * 2f) * bitmap.Height + yOffset;
 
-        canvas.DrawBitmap(markerBitmap, mx - (float)markerBitmap!.Width / 2, my - markerBitmap.Height);
+        canvas.DrawBitmap(markerBitmap, mx - markerBitmap!.Width / 2f, my - markerBitmap.Height);
 
         var data = bitmap.Encode(SKEncodedImageFormat.Jpeg, 100);
         return File(data.AsStream(true), "image/jpeg");
