@@ -11,6 +11,23 @@ public class Shop
     public string? CreatorCode { get; set; }
     public string? BackgroundImagePath { get; set; }
     public ShopSection[] Sections { get; set; }
+
+    public string GetTemplateHash()
+    {
+        var hash = new HashCode();
+        foreach (var section in Sections)
+            hash.Add(section.GetTemplateHash());
+        return hash.ToHashCode().ToString();
+    }
+
+    public string GetLocaleTemplateHash()
+    {
+        var hash = new HashCode();
+        hash.Add(Date);
+        foreach (var section in Sections)
+            hash.Add(section.GetLocaleTemplateHash());
+        return hash.ToHashCode().ToString();
+    }
 }
 
 public class ShopSection
@@ -18,6 +35,25 @@ public class ShopSection
     public string Id { get; set; }
     public string? Name { get; set; }
     public ShopEntry[] Entries { get; set; }
+
+    public int GetTemplateHash()
+    {
+        var hash = new HashCode();
+        hash.Add(Id);
+        foreach (var entry in Entries)
+            hash.Add(entry.GetTemplateHash());
+        return hash.ToHashCode();
+    }
+
+    public int GetLocaleTemplateHash()
+    {
+        var hash = new HashCode();
+        hash.Add(Id);
+        hash.Add(Name);
+        foreach (var entry in Entries)
+            hash.Add(entry.GetLocaleTemplateHash());
+        return hash.ToHashCode();
+    }
 }
 
 public class ShopEntry
@@ -36,6 +72,34 @@ public class ShopEntry
     public bool IsSpecial { get; set; }
 
     [JsonIgnore] public SKBitmap? Image { get; set; }
+
+    public int GetTemplateHash()
+    {
+        var hash = new HashCode();
+        hash.Add(Id);
+        hash.Add(RegularPrice);
+        hash.Add(FinalPrice);
+        hash.Add(Size);
+        if (BackgroundColors != null)
+        {
+            foreach (var color in BackgroundColors)
+                hash.Add(color);
+        }
+        hash.Add(TextBackgroundColor);
+        hash.Add(ImageType);
+        hash.Add(ImageUrl);
+        hash.Add(FallbackImageUrl);
+        hash.Add(IsSpecial);
+        return hash.ToHashCode();
+    }
+
+    public int GetLocaleTemplateHash()
+    {
+        var hash = new HashCode();
+        hash.Add(GetTemplateHash());
+        hash.Add(Name);
+        return hash.ToHashCode();
+    }
 }
 
 public class ShopEntryBanner

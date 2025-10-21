@@ -52,25 +52,21 @@ public partial class ShopImageController(
     };
 
     [HttpPost]
-    public async Task<IActionResult> Shop(
-        [FromBody] Shop shop, [FromQuery] string? locale, [FromQuery] bool? isNewShop,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Shop([FromBody] Shop shop, [FromQuery] bool? forceNew, CancellationToken cancellationToken)
     {
-        locale ??= "en";
-        var _isNewShop = isNewShop ?? false;
-        logger.LogInformation("Item Shop image request received | Locale = {Locale} | New Shop = {IsNewShop}", locale, _isNewShop);
-        // Hash the section ids
-        var templateHash = string.Join('-', shop.Sections.Select(x => x.Id)).GetHashCode().ToString();
+        var _forceNew = forceNew ?? false;
+        logger.LogInformation("Item Shop image request received");
+        var templateHash = shop.GetTemplateHash();
+        var localeTemplateHash = shop.GetLocaleTemplateHash();
 
         SKBitmap? templateBitmap;
         ShopSectionLocationData[]? locationData;
-
-        using (await namedLock.LockAsync("shop_template", cancellationToken).ConfigureAwait(false))
+        using (await namedLock.LockAsync($"shop_template_{templateHash}", cancellationToken).ConfigureAwait(false))
         {
             logger.LogDebug("Acquired shop template lock");
             templateBitmap = cache.Get<SKBitmap?>($"shop_template_bmp_{templateHash}");
             locationData = cache.Get<ShopSectionLocationData[]?>($"shop_location_data_{templateHash}");
-            if (_isNewShop || templateBitmap is null)
+            if (_forceNew || templateBitmap is null)
             {
                 logger.LogDebug("Generating new shop template");
                 await PrefetchImages(shop, cancellationToken);
@@ -84,23 +80,21 @@ public partial class ShopImageController(
         }
 
         SKBitmap? localeTemplateBitmap;
-
-        var lockName = $"shop_template_{locale}";
-        using (await namedLock.LockAsync(lockName, cancellationToken).ConfigureAwait(false))
+        using (await namedLock.LockAsync($"shop_template_{localeTemplateHash}", cancellationToken).ConfigureAwait(false))
         {
-            logger.LogDebug("Acquired locale shop template lock for locale {Locale}", locale);
-            localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_template_{locale}_bmp");
-            if (_isNewShop || localeTemplateBitmap == null)
+            logger.LogDebug("Acquired locale shop template lock");
+            localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_template_{localeTemplateHash}_bmp");
+            if (_forceNew || localeTemplateBitmap == null)
             {
-                logger.LogDebug("Generating new locale shop template for locale {Locale}", locale);
+                logger.LogDebug("Generating new locale shop template");
                 localeTemplateBitmap = await GenerateLocaleTemplate(shop, templateBitmap, locationData!);
-                cache.Set($"shop_template_{locale}_bmp", localeTemplateBitmap, ShopImageCacheOptions);
+                cache.Set($"shop_template_{localeTemplateHash}_bmp", localeTemplateBitmap, ShopImageCacheOptions);
             }
-            logger.LogDebug("Releasing locale shop template lock for locale {Locale}", locale);
+            logger.LogDebug("Releasing locale shop template lock");
         }
 
-        using var localeTemplateBitmapCopy = localeTemplateBitmap.Copy();
-        using var shopImage = await GenerateShopImage(shop, localeTemplateBitmapCopy);
+        logger.LogDebug("Generating final shop image");
+        using var shopImage = await GenerateShopImage(shop, localeTemplateBitmap);
         var data = shopImage.Encode(SKEncodedImageFormat.Png, 100);
         return File(data.AsStream(true), "image/png");
     }
