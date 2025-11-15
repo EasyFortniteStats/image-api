@@ -93,9 +93,9 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
             await assets.GetBitmap(
                 $"Assets/Images/Map/Markers/{RandomNumberGenerator.GetInt32(markerAmount - 1)}.png"); // don't dispose
 
-        const int worldRadius = 150_000;
-        const int xOffset = -60;
-        const int yOffset = 0;
+        const int worldRadius = 80_000;
+        const int xOffset = -12_200;
+        const int yOffset = 3_200;
 
         var mx = (drop.X + worldRadius) / (worldRadius * 2f) * bitmap.Width + xOffset;
         var my = (drop.Y + worldRadius) / (worldRadius * 2f) * bitmap.Height + yOffset;
