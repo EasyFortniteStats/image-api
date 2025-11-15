@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>EasyFortniteStats_ImageApi</RootNamespace>
@@ -13,7 +13,7 @@
         <PackageReference Include="AsyncKeyedLock" Version="7.1.7" />
         <PackageReference Include="SkiaSharp" Version="[2.88.9,3.0)" />
         <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="[2.88.9,3.0)" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1" />
     </ItemGroup>
     
     <!-- Include asset files -->
