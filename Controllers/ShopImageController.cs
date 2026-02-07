@@ -292,7 +292,7 @@ public partial class ShopImageController(
             var shopSection = shop.Sections.FirstOrDefault(x => x.Id == sectionLocationData.Id);
 
             // Draw the section name if it exists
-            if (sectionLocationData.Name != null)
+            if (sectionLocationData.Name != null && shopSection?.Name != null)
             {
                 using var sectionNamePaint = new SKPaint();
                 sectionNamePaint.IsAntialias = true;
