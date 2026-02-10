@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using AsyncKeyedLock;
 using Microsoft.Extensions.Caching.Memory;
 using SkiaSharp;
 
@@ -7,7 +8,7 @@ namespace EasyFortniteStats_ImageApi;
 public class SharedAssets(IMemoryCache memoryCache)
 {
     private static readonly MemoryCacheEntryOptions CacheOptions = new() { Priority = CacheItemPriority.NeverRemove };
-    private static readonly SemaphoreSlim Semaphore = new(1);
+    private static readonly AsyncNonKeyedLocker Semaphore = new(1);
 
     public async ValueTask<SKBitmap?> GetBitmap(string format, string? arg1)
     {
@@ -24,26 +25,23 @@ public class SharedAssets(IMemoryCache memoryCache)
         var cached = memoryCache.Get<SKBitmap?>(key);
         if (cached is not null) return cached;
 
-        await Semaphore.WaitAsync();
+        using var _ = await Semaphore.LockAsync();
 
         cached = memoryCache.Get<SKBitmap?>(key);
         if (cached is not null)
         {
-            Semaphore.Release();
             return cached;
         }
 
         if (!File.Exists(path))
         {
             memoryCache.Set(key, (SKBitmap?)null, CacheOptions);
-            Semaphore.Release();
             return null;
         }
 
         using var data = await ReadToSkData(path);
         var bitmap = SKBitmap.Decode(data);
         memoryCache.Set(key, bitmap, CacheOptions);
-        Semaphore.Release();
         return bitmap;
     }
 
@@ -53,19 +51,17 @@ public class SharedAssets(IMemoryCache memoryCache)
         var cached = memoryCache.Get<SKTypeface>(key);
         if (cached is not null) return cached;
 
-        await Semaphore.WaitAsync();
+        using var _ = await Semaphore.LockAsync();
 
         cached = memoryCache.Get<SKTypeface>(key);
         if (cached is not null)
         {
-            Semaphore.Release();
             return cached;
         }
 
         using var data = await ReadToSkData(path);
         var typeface = SKTypeface.FromData(data);
         memoryCache.Set(key, typeface, CacheOptions);
-        Semaphore.Release();
         return typeface;
     }
 
