@@ -403,5 +403,5 @@ data/
 # Fonts, as we don't have license to distribute them
 Assets/Fonts/
 
-# Mac DS_Store files
+# MacOS
 .DS_Store
