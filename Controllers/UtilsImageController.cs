@@ -91,7 +91,7 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         var markerAmount = Directory.EnumerateFiles("Assets/Images/Map/Markers", "*.png").Count();
         var markerBitmap =
             await assets.GetBitmap(
-                $"Assets/Images/Map/Markers/{RandomNumberGenerator.GetInt32(markerAmount - 1)}.png"); // don't dispose
+                $"Assets/Images/Map/Markers/{RandomNumberGenerator.GetInt32(markerAmount)}.png"); // don't dispose
 
         const int worldRadius = 80_000;
         const int xOffset = -12_200;
