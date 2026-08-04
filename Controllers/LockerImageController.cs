@@ -145,7 +145,7 @@ public class AccountImageController(
     {
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount / 2,
+            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2),
             CancellationToken = cancellationToken
         };
         using var client = clientFactory.CreateClient();
