@@ -60,6 +60,7 @@ public partial class ShopImageController(
         var localeTemplateHash = shop.GetLocaleTemplateHash();
 
         SKBitmap? templateBitmap;
+        SKBitmap templateBitmapCopy;
         ShopSectionLocationData[]? locationData;
         using (await namedLock.LockAsync($"shop_template_{templateHash}", cancellationToken).ConfigureAwait(false))
         {
@@ -76,27 +77,33 @@ public partial class ShopImageController(
                 cache.Set($"shop_template_bmp_{templateHash}", templateBitmap, ShopImageCacheOptions);
                 cache.Set($"shop_location_data_{templateHash}", locationData, TimeSpan.FromMinutes(10));
             }
+            templateBitmapCopy = templateBitmap.Copy();
             logger.LogDebug("Releasing shop template lock");
         }
 
-        SKBitmap? localeTemplateBitmap;
-        using (await namedLock.LockAsync($"shop_template_{localeTemplateHash}", cancellationToken).ConfigureAwait(false))
+        using (templateBitmapCopy)
         {
-            logger.LogDebug("Acquired locale shop template lock");
-            localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_template_{localeTemplateHash}_bmp");
-            if (_forceNew || localeTemplateBitmap == null)
+            SKBitmap localeTemplateBitmapCopy;
+            using (await namedLock.LockAsync($"shop_template_{localeTemplateHash}", cancellationToken).ConfigureAwait(false))
             {
-                logger.LogDebug("Generating new locale shop template");
-                localeTemplateBitmap = await GenerateLocaleTemplate(shop, templateBitmap, locationData!);
-                cache.Set($"shop_template_{localeTemplateHash}_bmp", localeTemplateBitmap, ShopImageCacheOptions);
+                logger.LogDebug("Acquired locale shop template lock");
+                var localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_template_{localeTemplateHash}_bmp");
+                if (_forceNew || localeTemplateBitmap == null)
+                {
+                    logger.LogDebug("Generating new locale shop template");
+                    localeTemplateBitmap = await GenerateLocaleTemplate(shop, templateBitmapCopy, locationData!);
+                    cache.Set($"shop_template_{localeTemplateHash}_bmp", localeTemplateBitmap, ShopImageCacheOptions);
+                }
+                localeTemplateBitmapCopy = localeTemplateBitmap.Copy();
+                logger.LogDebug("Releasing locale shop template lock");
             }
-            logger.LogDebug("Releasing locale shop template lock");
-        }
 
-        logger.LogDebug("Generating final shop image");
-        using var shopImage = await GenerateShopImage(shop, localeTemplateBitmap);
-        var data = shopImage.Encode(SKEncodedImageFormat.Png, 100);
-        return File(data.AsStream(true), "image/png");
+            logger.LogDebug("Generating final shop image");
+            using var localeCopy = localeTemplateBitmapCopy;
+            using var shopImage = await GenerateShopImage(shop, localeCopy);
+            var data = shopImage.Encode(SKEncodedImageFormat.Png, 100);
+            return File(data.AsStream(true), "image/png");
+        }
     }
 
     [HttpPost("section")]
@@ -109,6 +116,7 @@ public partial class ShopImageController(
         logger.LogInformation("Item Shop section image request received | Locale = {Locale} | New Shop = {SectionId}", locale, section.Id);
 
         SKBitmap? templateBitmap;
+        SKBitmap templateBitmapCopy;
         ShopSectionLocationData? shopSectionLocationData;
 
         using (await namedLock.LockAsync($"shop_section_template_{section.Id}", cancellationToken).ConfigureAwait(false))
@@ -125,25 +133,28 @@ public partial class ShopImageController(
                 cache.Set($"shop_section_location_data_{section.Id}", shopSectionLocationData,
                     TimeSpan.FromMinutes(10));
             }
+            templateBitmapCopy = templateBitmap.Copy();
         }
 
-        SKBitmap? localeTemplateBitmap;
+        using var templateCopy = templateBitmapCopy;
+        SKBitmap localeTemplateBitmapCopy;
 
         var lockName = $"shop_section_template_{locale}_{section.Id}";
         using (await namedLock.LockAsync(lockName, cancellationToken).ConfigureAwait(false))
         {
-            localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_section_template_{locale}_bmp_{section.Id}");
+            var localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_section_template_{locale}_bmp_{section.Id}");
             if (_isNewShop || localeTemplateBitmap == null)
             {
                 localeTemplateBitmap =
-                    await GenerateSectionLocaleTemplate(section, templateBitmap, shopSectionLocationData!);
+                    await GenerateSectionLocaleTemplate(section, templateCopy, shopSectionLocationData!);
                 cache.Set($"shop_section_template_{locale}_bmp_{section.Id}", localeTemplateBitmap,
                     ShopImageCacheOptions);
             }
+            localeTemplateBitmapCopy = localeTemplateBitmap.Copy();
         }
 
-        using var localeTemplateBitmapCopy = localeTemplateBitmap.Copy();
-        using var image = await GenerateShopSectionImage(section, localeTemplateBitmapCopy);
+        using var localeCopy = localeTemplateBitmapCopy;
+        using var image = await GenerateShopSectionImage(section, localeCopy);
         var data = image.Encode(SKEncodedImageFormat.Png, 100);
         return File(data.AsStream(true), "image/png");
     }
@@ -158,7 +169,7 @@ public partial class ShopImageController(
         var entries = sections.SelectMany(x => x.Entries);
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount / 2,
+            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2),
             CancellationToken = cancellationToken
         };
         using var client = clientFactory.CreateClient();
@@ -180,7 +191,8 @@ public partial class ShopImageController(
                 try
                 {
                     var imageBytes = await client.GetByteArrayAsync(url, token);
-                    bitmap = SKBitmap.Decode(imageBytes);
+                    bitmap = SKBitmap.Decode(imageBytes)
+                        ?? throw new InvalidDataException($"Upstream image for shop entry '{entry.Id}' is invalid.");
                 }
                 catch (Exception)
                 {

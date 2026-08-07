@@ -84,14 +84,13 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         if (!System.IO.File.Exists(filePath))
             return BadRequest("Map file doesn't exist.");
 
-        var mapBytes = await System.IO.File.ReadAllBytesAsync(filePath);
-        using var bitmap = SKBitmap.Decode(mapBytes);
+        using var bitmap = SKBitmap.Decode(filePath);
         using var canvas = new SKCanvas(bitmap);
 
         var markerAmount = Directory.EnumerateFiles("Assets/Images/Map/Markers", "*.png").Count();
         var markerBitmap =
             await assets.GetBitmap(
-                $"Assets/Images/Map/Markers/{RandomNumberGenerator.GetInt32(markerAmount - 1)}.png"); // don't dispose
+                $"Assets/Images/Map/Markers/{RandomNumberGenerator.GetInt32(markerAmount)}.png"); // don't dispose
 
         const int worldRadius = 80_000;
         const int xOffset = -12_200;

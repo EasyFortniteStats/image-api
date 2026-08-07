@@ -145,7 +145,7 @@ public class AccountImageController(
     {
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount / 2,
+            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2),
             CancellationToken = cancellationToken
         };
         using var client = clientFactory.CreateClient();
@@ -192,34 +192,56 @@ public class AccountImageController(
             if (itemImageBytes is not null)
             {
                 var itemImageRaw = SKBitmap.Decode(itemImageBytes);
+                if (itemImageRaw is null)
+                {
+                    logger.LogWarning("Image data for {ItemName} ({ItemId}) could not be decoded", item.Name, item.Id);
+                    item.Image = await GenerateItemCard(item, null);
+                    return;
+                }
+
                 if (itemImageRaw.Width != 256 || itemImageRaw.Height != 256)
                 {
                     fileExists = false;
-                    var resized = itemImageRaw.Resize(new SKImageInfo(256, 256), SKFilterQuality.Medium);
-                    itemImageRaw.Dispose();
-                    itemImage = resized;
+                    try
+                    {
+                        itemImage = itemImageRaw.Resize(new SKImageInfo(256, 256), SKFilterQuality.Medium);
+                    }
+                    finally
+                    {
+                        itemImageRaw.Dispose();
+                    }
                 }
                 else
                 {
+                    // Transfer ownership; itemImage is disposed after the card has been generated.
                     itemImage = itemImageRaw;
                 }
 
-                if (!fileExists)
+                if (itemImage is null)
                 {
-                    Directory.CreateDirectory(BASE_ITEM_IMAGE_PATH);
-                    using var data = itemImage.Encode(SKEncodedImageFormat.Png, 100);
-                    var dataBytes = data.AsSpan().ToArray();
-                    await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write,
-                        FileShare.None, 4096, true);
-                    fileStream.SetLength(dataBytes.LongLength);
-                    await fileStream.WriteAsync(dataBytes, token);
+                    logger.LogWarning("Image for {ItemName} ({ItemId}) could not be resized", item.Name, item.Id);
+                    item.Image = await GenerateItemCard(item, null);
+                    return;
                 }
+
+                using (itemImage)
+                {
+                    if (!fileExists)
+                    {
+                        Directory.CreateDirectory(BASE_ITEM_IMAGE_PATH);
+                        using var data = itemImage.Encode(SKEncodedImageFormat.Png, 100);
+                        await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write,
+                            FileShare.None, 4096, true);
+                        await data.AsStream().CopyToAsync(fileStream, token);
+                    }
+
+                    item.Image = await GenerateItemCard(item, itemImage);
+                }
+
+                return;
             }
 
-            using (itemImage)
-            {
-                item.Image = await GenerateItemCard(item, itemImage);
-            }
+            item.Image = await GenerateItemCard(item, null);
         });
     }
 

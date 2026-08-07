@@ -12,6 +12,11 @@ namespace EasyFortniteStats_ImageApi.Controllers;
 public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> namedLock, SharedAssets assets, ILogger<StatsImageController> logger)
     : ControllerBase
 {
+    private static readonly MemoryCacheEntryOptions TemplateCacheOptions = new()
+    {
+        SlidingExpiration = TimeSpan.FromMinutes(10)
+    };
+
     [HttpPost]
     public async Task<IActionResult> Post(Stats stats, StatsType type = StatsType.Normal)
     {
@@ -26,18 +31,23 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             : "";
 
         var lockName = $"stats_{type}{backgroundHash}_template_mutex";
-        SKBitmap? templateBitmap;
+        byte[]? templateData;
         using (await namedLock.LockAsync(lockName).ConfigureAwait(false))
         {
-            cache.TryGetValue($"stats_{type}{backgroundHash}_template_image", out templateBitmap);
-            if (templateBitmap is null)
+            var cacheKey = $"stats_{type}{backgroundHash}_template_image";
+            cache.TryGetValue(cacheKey, out templateData);
+            if (templateData is null)
             {
-                templateBitmap = await GenerateTemplate(stats, type);
-                cache.Set($"stats_{type}{backgroundHash}_template_image", templateBitmap);
+                using var templateBitmap = await GenerateTemplate(stats, type);
+                using var encodedTemplate = templateBitmap.Encode(SKEncodedImageFormat.Png, 100);
+                templateData = encodedTemplate.ToArray();
+                cache.Set(cacheKey, templateData, TemplateCacheOptions);
             }
         }
 
-        using var templateCopy = templateBitmap.Copy();
+        // The cache owns managed encoded data, while this request exclusively owns the decoded bitmap.
+        using var templateCopy = SKBitmap.Decode(templateData)
+            ?? throw new InvalidOperationException("The cached stats template could not be decoded.");
         using var bitmap = await GenerateImage(stats, type, templateCopy);
         var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
         return File(data.AsStream(true), "image/png");
