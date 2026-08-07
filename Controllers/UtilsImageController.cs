@@ -84,8 +84,7 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         if (!System.IO.File.Exists(filePath))
             return BadRequest("Map file doesn't exist.");
 
-        var mapBytes = await System.IO.File.ReadAllBytesAsync(filePath);
-        using var bitmap = SKBitmap.Decode(mapBytes);
+        using var bitmap = SKBitmap.Decode(filePath);
         using var canvas = new SKCanvas(bitmap);
 
         var markerAmount = Directory.EnumerateFiles("Assets/Images/Map/Markers", "*.png").Count();
