@@ -229,15 +229,14 @@ public partial class ShopImageController(
         }
         else
         {
-            using var backgroundImagePaint = new SKPaintSafe();
+            using var backgroundImagePaint = new SKPaint();
             backgroundImagePaint.IsAntialias = true;
             backgroundImagePaint.FilterQuality = SKFilterQuality.Medium;
 
-            using var resizedCustomBackgroundBitmap = backgroundBitmap.Resize(imageInfo, SKFilterQuality.Medium);
-            backgroundImagePaint.Shader = SKShader.CreateBitmap(resizedCustomBackgroundBitmap, SKShaderTileMode.Clamp,
-                SKShaderTileMode.Repeat);
-
-            canvas.DrawRoundRect(0, 0, imageInfo.Width, imageInfo.Height, 50, 50, backgroundImagePaint);
+            canvas.Save();
+            canvas.ClipRoundRect(new SKRoundRect(imageInfo.Rect, 50), antialias: true);
+            canvas.DrawBitmap(backgroundBitmap, imageInfo.Rect, backgroundImagePaint);
+            canvas.Restore();
         }
 
         canvas.DrawBitmap(templateBitmap, 0, 0);
@@ -254,9 +253,12 @@ public partial class ShopImageController(
 
 
             var maxBoxWidth = imageInfo.Width - 3 * HORIZONTAL_PADDING - shopTitleWidth;
-            using var creatorCodeBoxBitmap =
-                await GenerateCreatorCodeBox(shop.CreatorCodeTitle, shop.CreatorCode, maxBoxWidth);
-            canvas.DrawBitmap(creatorCodeBoxBitmap, imageInfo.Width - 100 - creatorCodeBoxBitmap.Width, 100);
+            if (maxBoxWidth > 0)
+            {
+                using var creatorCodeBoxBitmap =
+                    await GenerateCreatorCodeBox(shop.CreatorCodeTitle, shop.CreatorCode, maxBoxWidth);
+                canvas.DrawBitmap(creatorCodeBoxBitmap, imageInfo.Width - 100 - creatorCodeBoxBitmap.Width, 100);
+            }
 
             var adBannerBitmap = await assets.GetBitmap("Assets/Images/Shop/ad_banner.png"); // don't dispose
             canvas.DrawBitmap(adBannerBitmap, imageInfo.Width - 100 - 50 - adBannerBitmap!.Width,
@@ -640,15 +642,16 @@ public partial class ShopImageController(
         // Scale image down to fit the card
         if (shopEntry is { ImageType: "track", ImageUrl: null })
         {
-            using var coverBitmap = shopEntry.Image.Resize(new SKImageInfo(236, 236), SKFilterQuality.Medium);
-
-            using var roundedCoverBitmap = new SKBitmap(236, 236);
-            using var roundedCoverCanvas = new SKCanvas(roundedCoverBitmap);
-            roundedCoverCanvas.ClipRoundRect(
-                new SKRoundRect(new SKRect(0, 0, coverBitmap.Width, coverBitmap.Height), 10), antialias: true);
-            roundedCoverCanvas.DrawBitmap(coverBitmap, 0, 0);
-
-            canvas.DrawBitmap(roundedCoverBitmap, 10, 10);
+            var coverRect = SKRect.Create(10, 10, 236, 236);
+            using var coverPaint = new SKPaint
+            {
+                IsAntialias = true,
+                FilterQuality = SKFilterQuality.Medium
+            };
+            canvas.Save();
+            canvas.ClipRoundRect(new SKRoundRect(coverRect, 10), antialias: true);
+            canvas.DrawBitmap(shopEntry.Image, coverRect, coverPaint);
+            canvas.Restore();
         }
         else
         {
@@ -666,28 +669,34 @@ public partial class ShopImageController(
                 resizeHeight = imageInfo.Height;
             }
 
-            using var resizedImageBitmap = shopEntry.Image.Resize(new SKImageInfo(resizeWidth, resizeHeight), SKFilterQuality.Medium);
+            using var imagePaint = new SKPaint { FilterQuality = SKFilterQuality.Medium };
 
             // Car bundles get centered in the middle of the card vertically
             if (shopEntry.ImageType == "car-bundle")
             {
-                var cropY = (resizedImageBitmap.Height - imageInfo.Height) / 2;
-                var cropRect = new SKRect(0, cropY, resizedImageBitmap.Width, cropY + imageInfo.Height);
-                canvas.DrawBitmap(resizedImageBitmap, cropRect,
-                    new SKRect(0, 0, resizedImageBitmap.Width, imageInfo.Height));
+                var cropY = (resizeHeight - imageInfo.Height) / 2f;
+                var sourceScaleY = shopEntry.Image.Height / (float)resizeHeight;
+                var sourceRect = new SKRect(0, cropY * sourceScaleY, shopEntry.Image.Width,
+                    (cropY + imageInfo.Height) * sourceScaleY);
+                canvas.DrawBitmap(shopEntry.Image, sourceRect,
+                    new SKRect(0, 0, resizeWidth, imageInfo.Height), imagePaint);
             }
             // Center image in the middle of the card, if width is bigger than the image
-            else if (resizedImageBitmap.Width > imageInfo.Width)
+            else if (resizeWidth > imageInfo.Width)
             {
-                var cropX = (resizedImageBitmap.Width - imageInfo.Width) / 2;
-                var cropRect = new SKRect(cropX, 0, cropX + imageInfo.Width, resizedImageBitmap.Height);
-                canvas.DrawBitmap(resizedImageBitmap, cropRect,
-                    new SKRect(0, 0, imageInfo.Width, resizedImageBitmap.Height));
+                var cropX = (resizeWidth - imageInfo.Width) / 2f;
+                var sourceScaleX = shopEntry.Image.Width / (float)resizeWidth;
+                var sourceRect = new SKRect(cropX * sourceScaleX, 0,
+                    (cropX + imageInfo.Width) * sourceScaleX, shopEntry.Image.Height);
+                canvas.DrawBitmap(shopEntry.Image, sourceRect,
+                    new SKRect(0, 0, imageInfo.Width, resizeHeight), imagePaint);
             }
             else
             {
                 var offsetMulti = shopEntry.Size >= 3f ? 0.08f : 0f;
-                canvas.DrawBitmap(resizedImageBitmap, new SKPoint(0, resizedImageBitmap.Height * -offsetMulti));
+                canvas.DrawBitmap(shopEntry.Image,
+                    new SKRect(0, resizeHeight * -offsetMulti, resizeWidth,
+                        resizeHeight * (1 - offsetMulti)), imagePaint);
             }
         }
 

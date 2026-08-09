@@ -79,22 +79,14 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         }
         else
         {
-            using var backgroundImagePaint = new SKPaintSafe();
+            using var backgroundImagePaint = new SKPaint();
             backgroundImagePaint.IsAntialias = true;
             backgroundImagePaint.FilterQuality = SKFilterQuality.Medium;
 
-            if (customBackgroundBitmap.Width != imageInfo.Width || customBackgroundBitmap.Height != imageInfo.Height)
-            {
-                using var resizedCustomBackgroundBitmap =
-                    customBackgroundBitmap.Resize(imageInfo, SKFilterQuality.Medium);
-                backgroundImagePaint.Shader = SKShader.CreateBitmap(resizedCustomBackgroundBitmap,
-                    SKShaderTileMode.Clamp, SKShaderTileMode.Repeat);
-            }
-            else
-                backgroundImagePaint.Shader = SKShader.CreateBitmap(customBackgroundBitmap, SKShaderTileMode.Clamp,
-                    SKShaderTileMode.Repeat);
-
-            canvas.DrawRoundRect(0, 0, imageInfo.Width, imageInfo.Height, 50, 50, backgroundImagePaint);
+            canvas.Save();
+            canvas.ClipRoundRect(new SKRoundRect(imageInfo.Rect, 50), antialias: true);
+            canvas.DrawBitmap(customBackgroundBitmap, imageInfo.Rect, backgroundImagePaint);
+            canvas.Restore();
         }
 
         using var nameSplit = new SKPaint();
