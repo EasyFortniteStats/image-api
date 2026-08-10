@@ -355,12 +355,14 @@ public partial class ShopImageController(
                 pricePaintFont.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf");
 
                 var priceTextWidth = pricePaintFont.MeasureText(shopEntry.FinalPrice, pricePaint);
-                var pricePoint = new SKPoint(entryLocationData.Price.X, entryLocationData.Price.Y);
+                var pricePoint = new SKPoint(
+                    entryLocationData.Price.X,
+                    entryLocationData.Price.Y - pricePaintFont.Metrics.Descent);
                 canvas.DrawAlignedText(
                     shopEntry.FinalPrice,
                     pricePoint, pricePaintFont,
                     pricePaint,
-                    verticalAlignment: VerticalTextAlignment.Bottom);
+                    verticalAlignment: VerticalTextAlignment.Baseline);
 
                 // Draw strikeout old price if item is discounted
                 if (shopEntry.FinalPrice != shopEntry.RegularPrice)
@@ -375,12 +377,12 @@ public partial class ShopImageController(
                     var oldPriceTextWidth = oldPricePaintFont.MeasureText(shopEntry.RegularPrice, oldPricePaint);
                     var oldPricePoint = new SKPoint(
                         entryLocationData.Price.X + priceTextWidth + 9,
-                        entryLocationData.Price.Y);
+                        entryLocationData.Price.Y - oldPricePaintFont.Metrics.Descent);
                     canvas.DrawAlignedText(
                         shopEntry.RegularPrice,
                         oldPricePoint, oldPricePaintFont,
                         oldPricePaint,
-                        verticalAlignment: VerticalTextAlignment.Bottom);
+                        verticalAlignment: VerticalTextAlignment.Baseline);
 
                     // Draw the strikeout line
                     using var strikePaint = new SKPaint();
@@ -388,9 +390,8 @@ public partial class ShopImageController(
                     strikePaint.StrokeWidth = 2f;
                     strikePaint.Color = SKColors.White.WithAlpha((int)(.6 * 255));
 
-                    var oldPriceBaseline = oldPricePoint.Y - oldPricePaintFont.Metrics.Descent;
-                    var strikeStart = new SKPoint(oldPricePoint.X - 4, oldPriceBaseline - 9);
-                    var strikeEnd = new SKPoint(oldPricePoint.X + oldPriceTextWidth + 2, oldPriceBaseline - 6);
+                    var strikeStart = new SKPoint(oldPricePoint.X - 4, oldPricePoint.Y - 9);
+                    var strikeEnd = new SKPoint(oldPricePoint.X + oldPriceTextWidth + 2, oldPricePoint.Y - 6);
                     canvas.DrawLine(strikeStart, strikeEnd, strikePaint);
                 }
 
