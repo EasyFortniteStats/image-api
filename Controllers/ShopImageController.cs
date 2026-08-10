@@ -59,12 +59,12 @@ public partial class ShopImageController(
         var templateHash = shop.GetTemplateHash();
         var localeTemplateHash = shop.GetLocaleTemplateHash();
 
-        SKBitmap? templateBitmap;
+        SKBitmap templateBitmapCopy;
         ShopSectionLocationData[]? locationData;
         using (await namedLock.LockAsync($"shop_template_{templateHash}", cancellationToken).ConfigureAwait(false))
         {
             logger.LogDebug("Acquired shop template lock");
-            templateBitmap = cache.Get<SKBitmap?>($"shop_template_bmp_{templateHash}");
+            var templateBitmap = cache.Get<SKBitmap?>($"shop_template_bmp_{templateHash}");
             locationData = cache.Get<ShopSectionLocationData[]?>($"shop_location_data_{templateHash}");
             if (_forceNew || templateBitmap is null)
             {
@@ -76,27 +76,33 @@ public partial class ShopImageController(
                 cache.Set($"shop_template_bmp_{templateHash}", templateBitmap, ShopImageCacheOptions);
                 cache.Set($"shop_location_data_{templateHash}", locationData, TimeSpan.FromMinutes(10));
             }
+            templateBitmapCopy = templateBitmap.Copy();
             logger.LogDebug("Releasing shop template lock");
         }
 
-        SKBitmap? localeTemplateBitmap;
-        using (await namedLock.LockAsync($"shop_template_{localeTemplateHash}", cancellationToken).ConfigureAwait(false))
+        using (templateBitmapCopy)
         {
-            logger.LogDebug("Acquired locale shop template lock");
-            localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_template_{localeTemplateHash}_bmp");
-            if (_forceNew || localeTemplateBitmap == null)
+            SKBitmap localeTemplateBitmapCopy;
+            using (await namedLock.LockAsync($"shop_template_{localeTemplateHash}", cancellationToken).ConfigureAwait(false))
             {
-                logger.LogDebug("Generating new locale shop template");
-                localeTemplateBitmap = await GenerateLocaleTemplate(shop, templateBitmap, locationData!);
-                cache.Set($"shop_template_{localeTemplateHash}_bmp", localeTemplateBitmap, ShopImageCacheOptions);
+                logger.LogDebug("Acquired locale shop template lock");
+                var localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_template_{localeTemplateHash}_bmp");
+                if (_forceNew || localeTemplateBitmap == null)
+                {
+                    logger.LogDebug("Generating new locale shop template");
+                    localeTemplateBitmap = await GenerateLocaleTemplate(shop, templateBitmapCopy, locationData!);
+                    cache.Set($"shop_template_{localeTemplateHash}_bmp", localeTemplateBitmap, ShopImageCacheOptions);
+                }
+                localeTemplateBitmapCopy = localeTemplateBitmap.Copy();
+                logger.LogDebug("Releasing locale shop template lock");
             }
-            logger.LogDebug("Releasing locale shop template lock");
-        }
 
-        logger.LogDebug("Generating final shop image");
-        using var shopImage = await GenerateShopImage(shop, localeTemplateBitmap);
-        var data = shopImage.Encode(SKEncodedImageFormat.Png, 100);
-        return File(data.AsStream(true), "image/png");
+            logger.LogDebug("Generating final shop image");
+            using var localeCopy = localeTemplateBitmapCopy;
+            using var shopImage = await GenerateShopImage(shop, localeCopy);
+            var data = shopImage.Encode(SKEncodedImageFormat.Png, 100);
+            return File(data.AsStream(true), "image/png");
+        }
     }
 
     [HttpPost("section")]
@@ -108,12 +114,12 @@ public partial class ShopImageController(
         var _isNewShop = isNewShop ?? false;
         logger.LogInformation("Item Shop section image request received | Locale = {Locale} | New Shop = {SectionId}", locale, section.Id);
 
-        SKBitmap? templateBitmap;
+        SKBitmap templateBitmapCopy;
         ShopSectionLocationData? shopSectionLocationData;
 
         using (await namedLock.LockAsync($"shop_section_template_{section.Id}", cancellationToken).ConfigureAwait(false))
         {
-            templateBitmap = cache.Get<SKBitmap?>($"shop_section_template_bmp_{section.Id}");
+            var templateBitmap = cache.Get<SKBitmap?>($"shop_section_template_bmp_{section.Id}");
             shopSectionLocationData = cache.Get<ShopSectionLocationData?>($"shop_section_location_data_{section.Id}");
             if (_isNewShop || templateBitmap is null)
             {
@@ -125,25 +131,28 @@ public partial class ShopImageController(
                 cache.Set($"shop_section_location_data_{section.Id}", shopSectionLocationData,
                     TimeSpan.FromMinutes(10));
             }
+            templateBitmapCopy = templateBitmap.Copy();
         }
 
-        SKBitmap? localeTemplateBitmap;
+        using var templateCopy = templateBitmapCopy;
+        SKBitmap localeTemplateBitmapCopy;
 
         var lockName = $"shop_section_template_{locale}_{section.Id}";
         using (await namedLock.LockAsync(lockName, cancellationToken).ConfigureAwait(false))
         {
-            localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_section_template_{locale}_bmp_{section.Id}");
+            var localeTemplateBitmap = cache.Get<SKBitmap?>($"shop_section_template_{locale}_bmp_{section.Id}");
             if (_isNewShop || localeTemplateBitmap == null)
             {
                 localeTemplateBitmap =
-                    await GenerateSectionLocaleTemplate(section, templateBitmap, shopSectionLocationData!);
+                    await GenerateSectionLocaleTemplate(section, templateCopy, shopSectionLocationData!);
                 cache.Set($"shop_section_template_{locale}_bmp_{section.Id}", localeTemplateBitmap,
                     ShopImageCacheOptions);
             }
+            localeTemplateBitmapCopy = localeTemplateBitmap.Copy();
         }
 
-        using var localeTemplateBitmapCopy = localeTemplateBitmap.Copy();
-        using var image = await GenerateShopSectionImage(section, localeTemplateBitmapCopy);
+        using var localeCopy = localeTemplateBitmapCopy;
+        using var image = await GenerateShopSectionImage(section, localeCopy);
         var data = image.Encode(SKEncodedImageFormat.Png, 100);
         return File(data.AsStream(true), "image/png");
     }
@@ -158,7 +167,7 @@ public partial class ShopImageController(
         var entries = sections.SelectMany(x => x.Entries);
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount / 2,
+            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2),
             CancellationToken = cancellationToken
         };
         using var client = clientFactory.CreateClient();
@@ -180,7 +189,8 @@ public partial class ShopImageController(
                 try
                 {
                     var imageBytes = await client.GetByteArrayAsync(url, token);
-                    bitmap = SKBitmap.Decode(imageBytes);
+                    bitmap = SKBitmap.Decode(imageBytes)
+                        ?? throw new InvalidDataException($"Upstream image for shop entry '{entry.Id}' is invalid.");
                 }
                 catch (Exception)
                 {
@@ -217,15 +227,14 @@ public partial class ShopImageController(
         }
         else
         {
-            using var backgroundImagePaint = new SKPaintSafe();
+            using var backgroundImagePaint = new SKPaint();
             backgroundImagePaint.IsAntialias = true;
             backgroundImagePaint.FilterQuality = SKFilterQuality.Medium;
 
-            using var resizedCustomBackgroundBitmap = backgroundBitmap.Resize(imageInfo, SKFilterQuality.Medium);
-            backgroundImagePaint.Shader = SKShader.CreateBitmap(resizedCustomBackgroundBitmap, SKShaderTileMode.Clamp,
-                SKShaderTileMode.Repeat);
-
-            canvas.DrawRoundRect(0, 0, imageInfo.Width, imageInfo.Height, 50, 50, backgroundImagePaint);
+            canvas.Save();
+            canvas.ClipRoundRect(new SKRoundRect(imageInfo.Rect, 50), antialias: true);
+            canvas.DrawBitmap(backgroundBitmap, imageInfo.Rect, backgroundImagePaint);
+            canvas.Restore();
         }
 
         canvas.DrawBitmap(templateBitmap, 0, 0);
@@ -242,9 +251,12 @@ public partial class ShopImageController(
 
 
             var maxBoxWidth = imageInfo.Width - 3 * HORIZONTAL_PADDING - shopTitleWidth;
-            using var creatorCodeBoxBitmap =
-                await GenerateCreatorCodeBox(shop.CreatorCodeTitle, shop.CreatorCode, maxBoxWidth);
-            canvas.DrawBitmap(creatorCodeBoxBitmap, imageInfo.Width - 100 - creatorCodeBoxBitmap.Width, 100);
+            if (maxBoxWidth > 0)
+            {
+                using var creatorCodeBoxBitmap =
+                    await GenerateCreatorCodeBox(shop.CreatorCodeTitle, shop.CreatorCode, maxBoxWidth);
+                canvas.DrawBitmap(creatorCodeBoxBitmap, imageInfo.Width - 100 - creatorCodeBoxBitmap.Width, 100);
+            }
 
             var adBannerBitmap = await assets.GetBitmap("Assets/Images/Shop/ad_banner.png"); // don't dispose
             canvas.DrawBitmap(adBannerBitmap, imageInfo.Width - 100 - 50 - adBannerBitmap!.Width,
@@ -271,7 +283,7 @@ public partial class ShopImageController(
         shopTitlePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf");
 
         var shopTitleWidth = shopTitlePaint.MeasureText(shop.Title);
-        canvas.DrawText(shop.Title, 100, 50 - shopTitlePaint.FontMetrics.Ascent, shopTitlePaint);
+        canvas.DrawAlignedText(shop.Title, new SKPoint(100, 50), shopTitlePaint);
 
         // Drawing the date
         using var datePaint = new SKPaint();
@@ -284,8 +296,8 @@ public partial class ShopImageController(
         var datePoint = new SKPoint(
             Math.Max(HORIZONTAL_PADDING + shopTitleWidth / 2f,
                 HORIZONTAL_PADDING + datePaint.MeasureText(shop.Date) / 2),
-            313 - datePaint.FontMetrics.Ascent);
-        canvas.DrawText(shop.Date, datePoint, datePaint);
+            313);
+        canvas.DrawAlignedText(shop.Date, datePoint, datePaint, SKTextAlign.Center);
 
         foreach (var sectionLocationData in shopSectionLocationData)
         {
@@ -300,9 +312,8 @@ public partial class ShopImageController(
                 sectionNamePaint.Color = SKColors.White;
                 sectionNamePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-86BoldItalic.otf");
 
-                var sectionNamePoint = new SKPoint(sectionLocationData.Name.X,
-                    sectionLocationData.Name.Y - sectionNamePaint.FontMetrics.Ascent);
-                canvas.DrawText(shopSection?.Name, sectionNamePoint, sectionNamePaint);
+                var sectionNamePoint = new SKPoint(sectionLocationData.Name.X, sectionLocationData.Name.Y);
+                canvas.DrawAlignedText(shopSection.Name, sectionNamePoint, sectionNamePaint);
             }
 
             foreach (var entryLocationData in sectionLocationData.Entries)
@@ -317,18 +328,19 @@ public partial class ShopImageController(
                 entryNamePaint.Color = SKColors.White;
                 entryNamePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf");
 
-                var entryNameTextBounds = new SKRect();
                 var nameLines = SplitNameText(shopEntry.Name, entryLocationData.Name.MaxWidth ?? 0, entryNamePaint);
                 if (nameLines.Length > 1)
                 {
-                    entryNamePaint.MeasureText(nameLines[0], ref entryNameTextBounds);
-                    canvas.DrawText(nameLines[0], entryLocationData.Name.X,
-                        entryLocationData.Name.Y + entryNameTextBounds.Height - 33, entryNamePaint);
+                    canvas.DrawAlignedText(
+                        nameLines[0],
+                        new SKPoint(entryLocationData.Name.X, entryLocationData.Name.Y - 33),
+                        entryNamePaint);
                 }
 
-                entryNamePaint.MeasureText(nameLines.Last(), ref entryNameTextBounds);
-                canvas.DrawText(nameLines.Last(), entryLocationData.Name.X,
-                    entryLocationData.Name.Y + entryNameTextBounds.Height, entryNamePaint);
+                canvas.DrawAlignedText(
+                    nameLines.Last(),
+                    new SKPoint(entryLocationData.Name.X, entryLocationData.Name.Y),
+                    entryNamePaint);
 
                 // Draw the shop entry price
                 using var pricePaint = new SKPaint();
@@ -338,9 +350,14 @@ public partial class ShopImageController(
                 pricePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf");
 
                 var priceTextWidth = pricePaint.MeasureText(shopEntry.FinalPrice);
-                var pricePoint = new SKPoint(entryLocationData.Price.X,
+                var pricePoint = new SKPoint(
+                    entryLocationData.Price.X,
                     entryLocationData.Price.Y - pricePaint.FontMetrics.Descent);
-                canvas.DrawText(shopEntry.FinalPrice, pricePoint, pricePaint);
+                canvas.DrawAlignedText(
+                    shopEntry.FinalPrice,
+                    pricePoint,
+                    pricePaint,
+                    verticalAlignment: VerticalTextAlignment.Baseline);
 
                 // Draw strikeout old price if item is discounted
                 if (shopEntry.FinalPrice != shopEntry.RegularPrice)
@@ -352,9 +369,14 @@ public partial class ShopImageController(
                     oldPricePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf");
 
                     var oldPriceTextWidth = oldPricePaint.MeasureText(shopEntry.RegularPrice);
-                    var oldPricePoint = new SKPoint(entryLocationData.Price.X + priceTextWidth + 9,
-                        entryLocationData.Price.Y - pricePaint.FontMetrics.Descent);
-                    canvas.DrawText(shopEntry.RegularPrice, oldPricePoint, oldPricePaint);
+                    var oldPricePoint = new SKPoint(
+                        entryLocationData.Price.X + priceTextWidth + 9,
+                        entryLocationData.Price.Y - oldPricePaint.FontMetrics.Descent);
+                    canvas.DrawAlignedText(
+                        shopEntry.RegularPrice,
+                        oldPricePoint,
+                        oldPricePaint,
+                        verticalAlignment: VerticalTextAlignment.Baseline);
 
                     // Draw the strikeout line
                     using var strikePaint = new SKPaint();
@@ -551,8 +573,11 @@ public partial class ShopImageController(
         }
 
 
-        // 6 + textBounds.Top
-        canvas.DrawText(text, 13, (float)imageInfo.Height / 2 - textBounds.MidY, bannerPaint);
+        canvas.DrawAlignedText(
+            text,
+            new SKPoint(13, imageInfo.Height / 2f),
+            bannerPaint,
+            verticalAlignment: VerticalTextAlignment.Center);
 
         return bitmap;
     }
@@ -628,15 +653,15 @@ public partial class ShopImageController(
         // Scale image down to fit the card
         if (shopEntry is { ImageType: "track", ImageUrl: null })
         {
-            using var coverBitmap = shopEntry.Image.Resize(new SKImageInfo(236, 236), SKFilterQuality.Medium);
-
-            using var roundedCoverBitmap = new SKBitmap(236, 236);
-            using var roundedCoverCanvas = new SKCanvas(roundedCoverBitmap);
-            roundedCoverCanvas.ClipRoundRect(
-                new SKRoundRect(new SKRect(0, 0, coverBitmap.Width, coverBitmap.Height), 10), antialias: true);
-            roundedCoverCanvas.DrawBitmap(coverBitmap, 0, 0);
-
-            canvas.DrawBitmap(roundedCoverBitmap, 10, 10);
+            var coverRect = SKRect.Create(10, 10, 236, 236);
+            
+            using var coverPaint = new SKPaint();
+            coverPaint.IsAntialias = true;
+            coverPaint.FilterQuality = SKFilterQuality.Medium;
+            canvas.Save();
+            canvas.ClipRoundRect(new SKRoundRect(coverRect, 10), antialias: true);
+            canvas.DrawBitmap(shopEntry.Image, coverRect, coverPaint);
+            canvas.Restore();
         }
         else
         {
@@ -654,28 +679,35 @@ public partial class ShopImageController(
                 resizeHeight = imageInfo.Height;
             }
 
-            using var resizedImageBitmap = shopEntry.Image.Resize(new SKImageInfo(resizeWidth, resizeHeight), SKFilterQuality.Medium);
+            using var imagePaint = new SKPaint();
+            imagePaint.FilterQuality = SKFilterQuality.Medium;
 
             // Car bundles get centered in the middle of the card vertically
             if (shopEntry.ImageType == "car-bundle")
             {
-                var cropY = (resizedImageBitmap.Height - imageInfo.Height) / 2;
-                var cropRect = new SKRect(0, cropY, resizedImageBitmap.Width, cropY + imageInfo.Height);
-                canvas.DrawBitmap(resizedImageBitmap, cropRect,
-                    new SKRect(0, 0, resizedImageBitmap.Width, imageInfo.Height));
+                var cropY = (resizeHeight - imageInfo.Height) / 2f;
+                var sourceScaleY = shopEntry.Image.Height / (float)resizeHeight;
+                var sourceRect = new SKRect(0, cropY * sourceScaleY, shopEntry.Image.Width,
+                    (cropY + imageInfo.Height) * sourceScaleY);
+                canvas.DrawBitmap(shopEntry.Image, sourceRect,
+                    new SKRect(0, 0, resizeWidth, imageInfo.Height), imagePaint);
             }
             // Center image in the middle of the card, if width is bigger than the image
-            else if (resizedImageBitmap.Width > imageInfo.Width)
+            else if (resizeWidth > imageInfo.Width)
             {
-                var cropX = (resizedImageBitmap.Width - imageInfo.Width) / 2;
-                var cropRect = new SKRect(cropX, 0, cropX + imageInfo.Width, resizedImageBitmap.Height);
-                canvas.DrawBitmap(resizedImageBitmap, cropRect,
-                    new SKRect(0, 0, imageInfo.Width, resizedImageBitmap.Height));
+                var cropX = (resizeWidth - imageInfo.Width) / 2f;
+                var sourceScaleX = shopEntry.Image.Width / (float)resizeWidth;
+                var sourceRect = new SKRect(cropX * sourceScaleX, 0,
+                    (cropX + imageInfo.Width) * sourceScaleX, shopEntry.Image.Height);
+                canvas.DrawBitmap(shopEntry.Image, sourceRect,
+                    new SKRect(0, 0, imageInfo.Width, resizeHeight), imagePaint);
             }
             else
             {
                 var offsetMulti = shopEntry.Size >= 3f ? 0.08f : 0f;
-                canvas.DrawBitmap(resizedImageBitmap, new SKPoint(0, resizedImageBitmap.Height * -offsetMulti));
+                canvas.DrawBitmap(shopEntry.Image,
+                    new SKRect(0, resizeHeight * -offsetMulti, resizeWidth,
+                        resizeHeight * (1 - offsetMulti)), imagePaint);
             }
         }
 

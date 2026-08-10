@@ -1,108 +1,81 @@
-﻿using System.Runtime.InteropServices;
-using Microsoft.Extensions.Caching.Memory;
+using System.Collections.Concurrent;
 using SkiaSharp;
 
 namespace EasyFortniteStats_ImageApi;
 
-public class SharedAssets(IMemoryCache memoryCache)
+/// <summary>
+/// Owns native Skia resources that are shared for the lifetime of the application.
+/// </summary>
+public sealed class SharedAssets : IDisposable
 {
-    private static readonly MemoryCacheEntryOptions CacheOptions = new() { Priority = CacheItemPriority.NeverRemove };
-    private static readonly SemaphoreSlim Semaphore = new(1);
+    private readonly ConcurrentDictionary<string, Lazy<SKBitmap?>> _bitmaps = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Lazy<SKTypeface>> _fonts = new(StringComparer.Ordinal);
+    private bool _disposed;
 
-    public async ValueTask<SKBitmap?> GetBitmap(string format, string? arg1)
+    public ValueTask<SKBitmap?> GetBitmap(string format, string? arg1)
     {
-        if (arg1 is null) return null;
-        var path = string.Format(format, arg1);
-        return await GetBitmap(path);
+        return arg1 is null ? ValueTask.FromResult<SKBitmap?>(null) : GetBitmap(string.Format(format, arg1));
     }
 
-    public async ValueTask<SKBitmap?> GetBitmap(string? path)
+    public ValueTask<SKBitmap?> GetBitmap(string? path)
     {
-        if (path is null) return null;
+        if (path is null)
+            return ValueTask.FromResult<SKBitmap?>(null);
 
-        var key = $"bmp_{path}";
-        var cached = memoryCache.Get<SKBitmap?>(key);
-        if (cached is not null) return cached;
-
-        await Semaphore.WaitAsync();
-
-        cached = memoryCache.Get<SKBitmap?>(key);
-        if (cached is not null)
-        {
-            Semaphore.Release();
-            return cached;
-        }
-
-        if (!File.Exists(path))
-        {
-            memoryCache.Set(key, (SKBitmap?)null, CacheOptions);
-            Semaphore.Release();
-            return null;
-        }
-
-        using var data = await ReadToSkData(path);
-        var bitmap = SKBitmap.Decode(data);
-        memoryCache.Set(key, bitmap, CacheOptions);
-        Semaphore.Release();
-        return bitmap;
-    }
-
-    public async ValueTask<SKTypeface> GetFont(string path)
-    {
-        var key = $"font_{path}";
-        var cached = memoryCache.Get<SKTypeface>(key);
-        if (cached is not null) return cached;
-
-        await Semaphore.WaitAsync();
-
-        cached = memoryCache.Get<SKTypeface>(key);
-        if (cached is not null)
-        {
-            Semaphore.Release();
-            return cached;
-        }
-
-        using var data = await ReadToSkData(path);
-        var typeface = SKTypeface.FromData(data);
-        memoryCache.Set(key, typeface, CacheOptions);
-        Semaphore.Release();
-        return typeface;
-    }
-
-    private static async Task<SKData> ReadToSkData(string path)
-    {
-        UnmanagedMemoryStream? fileDataBufferStream = null;
-        FileStream? fileStream = null;
-
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var lazyBitmap = _bitmaps.GetOrAdd(path, static assetPath =>
+            new Lazy<SKBitmap?>(() => File.Exists(assetPath) ? SKBitmap.Decode(assetPath) : null,
+                LazyThreadSafetyMode.ExecutionAndPublication));
         try
         {
-            fileStream = File.OpenRead(path);
-            var fileSize = fileStream.Length;
-            nint fileDataBufferPtr;
-
-            unsafe
-            {
-                var fileDataBuffer = NativeMemory.Alloc((nuint)fileSize);
-                fileDataBufferPtr = (nint)fileDataBuffer;
-                fileDataBufferStream =
-                    new UnmanagedMemoryStream((byte*)fileDataBuffer, fileSize, fileSize, FileAccess.ReadWrite);
-            }
-
-            await fileStream.CopyToAsync(fileDataBufferStream);
-
-            unsafe
-            {
-                var data = SKData.Create(fileDataBufferPtr, (int)fileSize,
-                    (address, _) => NativeMemory.Free(address.ToPointer()));
-                return data;
-            }
+            return ValueTask.FromResult(lazyBitmap.Value);
         }
-        finally
+        catch
         {
-            if (fileDataBufferStream is not null)
-                await fileDataBufferStream.DisposeAsync();
-            if (fileStream is not null)
-                await fileStream.DisposeAsync();
+            ((ICollection<KeyValuePair<string, Lazy<SKBitmap?>>>)_bitmaps)
+                .Remove(new KeyValuePair<string, Lazy<SKBitmap?>>(path, lazyBitmap));
+            throw;
         }
+    }
+
+    public ValueTask<SKTypeface> GetFont(string path)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var lazyTypeface = _fonts.GetOrAdd(path, static assetPath =>
+            new Lazy<SKTypeface>(() => SKTypeface.FromFile(assetPath)
+                ?? throw new InvalidOperationException($"Could not load font '{assetPath}'."),
+                LazyThreadSafetyMode.ExecutionAndPublication));
+        try
+        {
+            return ValueTask.FromResult(lazyTypeface.Value);
+        }
+        catch
+        {
+            ((ICollection<KeyValuePair<string, Lazy<SKTypeface>>>)_fonts)
+                .Remove(new KeyValuePair<string, Lazy<SKTypeface>>(path, lazyTypeface));
+            throw;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        foreach (var bitmap in _bitmaps.Values)
+        {
+            if (bitmap.IsValueCreated)
+                bitmap.Value?.Dispose();
+        }
+
+        foreach (var font in _fonts.Values)
+        {
+            if (font.IsValueCreated)
+                font.Value.Dispose();
+        }
+
+        _bitmaps.Clear();
+        _fonts.Clear();
     }
 }

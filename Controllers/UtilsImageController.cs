@@ -47,16 +47,17 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         }
 
         var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf");
-        var textBounds = new SKRect();
-
         using var textPaint = new SKPaint();
         textPaint.IsAntialias = true;
         textPaint.Color = SKColors.White;
         textPaint.TextSize = 20;
         textPaint.Typeface = segoeFont;
 
-        textPaint.MeasureText(progressBar.Text, ref textBounds);
-        canvas.DrawText(progressBar.Text, 500 + 5, bitmap.Height / 2f - textBounds.MidY, textPaint);
+        canvas.DrawAlignedText(
+            progressBar.Text,
+            new SKPoint(500 + 5, bitmap.Height / 2f),
+            textPaint,
+            verticalAlignment: VerticalTextAlignment.Center);
 
         if (progressBar.BarText != null)
         {
@@ -66,9 +67,12 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
             barTextPaint.TextSize = 15;
             barTextPaint.Typeface = segoeFont;
 
-            barTextPaint.MeasureText(progressBar.BarText, ref textBounds);
-            canvas.DrawText(progressBar.BarText, (500 - textBounds.Width) / 2f,
-                bitmap.Height / 2f - textBounds.MidY, barTextPaint);
+            canvas.DrawAlignedText(
+                progressBar.BarText,
+                SKRect.Create(0, 0, 500, bitmap.Height),
+                barTextPaint,
+                SKTextAlign.Center,
+                VerticalTextAlignment.Center);
         }
 
         var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
@@ -84,14 +88,13 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         if (!System.IO.File.Exists(filePath))
             return BadRequest("Map file doesn't exist.");
 
-        var mapBytes = await System.IO.File.ReadAllBytesAsync(filePath);
-        using var bitmap = SKBitmap.Decode(mapBytes);
+        using var bitmap = SKBitmap.Decode(filePath);
         using var canvas = new SKCanvas(bitmap);
 
         var markerAmount = Directory.EnumerateFiles("Assets/Images/Map/Markers", "*.png").Count();
         var markerBitmap =
             await assets.GetBitmap(
-                $"Assets/Images/Map/Markers/{RandomNumberGenerator.GetInt32(markerAmount - 1)}.png"); // don't dispose
+                $"Assets/Images/Map/Markers/{RandomNumberGenerator.GetInt32(markerAmount)}.png"); // don't dispose
 
         const int worldRadius = 80_000;
         const int xOffset = -12_200;

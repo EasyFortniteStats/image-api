@@ -87,7 +87,6 @@ public class AccountImageController(
 
         canvas.DrawRect(0, 0, imageInfo.Width, imageInfo.Height, backgroundPaint);
 
-        var textBounds = new SKRect();
         var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
 
         var iconBitmap = await assets.GetBitmap("Assets/Images/Locker/Icon.png"); // don't dispose
@@ -113,8 +112,7 @@ public class AccountImageController(
         namePaint.TextSize = nameFontSize;
         namePaint.FilterQuality = SKFilterQuality.Medium;
 
-        namePaint.MeasureText(locker.PlayerName, ref textBounds);
-        canvas.DrawText(locker.PlayerName, 50 + resize + splitWidth * 3, 58 - textBounds.Top, namePaint);
+        canvas.DrawAlignedText(locker.PlayerName, new SKPoint(50 + resize + splitWidth * 3, 58), namePaint);
 
         using var discordBoxBitmap = await ImageUtils.GenerateDiscordBox(assets, locker.UserName, uiResizingFactor);
         canvas.DrawBitmap(discordBoxBitmap, imageInfo.Width - 50 - discordBoxBitmap.Width, 39);
@@ -145,7 +143,7 @@ public class AccountImageController(
     {
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount / 2,
+            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2),
             CancellationToken = cancellationToken
         };
         using var client = clientFactory.CreateClient();
@@ -187,39 +185,60 @@ public class AccountImageController(
                 }
             }
 
-            SKBitmap? itemImage = null;
-
             if (itemImageBytes is not null)
             {
                 var itemImageRaw = SKBitmap.Decode(itemImageBytes);
+                if (itemImageRaw is null)
+                {
+                    logger.LogWarning("Image data for {ItemName} ({ItemId}) could not be decoded", item.Name, item.Id);
+                    item.Image = await GenerateItemCard(item, null);
+                    return;
+                }
+
+                SKBitmap? itemImage;
                 if (itemImageRaw.Width != 256 || itemImageRaw.Height != 256)
                 {
                     fileExists = false;
-                    var resized = itemImageRaw.Resize(new SKImageInfo(256, 256), SKFilterQuality.Medium);
-                    itemImageRaw.Dispose();
-                    itemImage = resized;
+                    try
+                    {
+                        itemImage = itemImageRaw.Resize(new SKImageInfo(256, 256), SKFilterQuality.Medium);
+                    }
+                    finally
+                    {
+                        itemImageRaw.Dispose();
+                    }
                 }
                 else
                 {
+                    // Transfer ownership; itemImage is disposed after the card has been generated.
                     itemImage = itemImageRaw;
                 }
 
-                if (!fileExists)
+                if (itemImage is null)
                 {
-                    Directory.CreateDirectory(BASE_ITEM_IMAGE_PATH);
-                    using var data = itemImage.Encode(SKEncodedImageFormat.Png, 100);
-                    var dataBytes = data.AsSpan().ToArray();
-                    await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write,
-                        FileShare.None, 4096, true);
-                    fileStream.SetLength(dataBytes.LongLength);
-                    await fileStream.WriteAsync(dataBytes, token);
+                    logger.LogWarning("Image for {ItemName} ({ItemId}) could not be resized", item.Name, item.Id);
+                    item.Image = await GenerateItemCard(item, null);
+                    return;
                 }
+
+                using (itemImage)
+                {
+                    if (!fileExists)
+                    {
+                        Directory.CreateDirectory(BASE_ITEM_IMAGE_PATH);
+                        using var data = itemImage.Encode(SKEncodedImageFormat.Png, 100);
+                        await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write,
+                            FileShare.None, 4096, true);
+                        await data.AsStream().CopyToAsync(fileStream, token);
+                    }
+
+                    item.Image = await GenerateItemCard(item, itemImage);
+                }
+
+                return;
             }
 
-            using (itemImage)
-            {
-                item.Image = await GenerateItemCard(item, itemImage);
-            }
+            item.Image = await GenerateItemCard(item, null);
         });
     }
 
@@ -246,11 +265,12 @@ public class AccountImageController(
             questionmarkPaint.TextSize = 256.0f;
             questionmarkPaint.TextAlign = SKTextAlign.Center;
 
-            var questionmarkTextBounds = new SKRect();
-            questionmarkPaint.MeasureText("?", ref questionmarkTextBounds);
-
-            canvas.DrawText("?", (float)bitmap.Width / 2, (float)bitmap.Height / 2 + questionmarkTextBounds.Height / 2,
-                questionmarkPaint);
+            canvas.DrawAlignedText(
+                "?",
+                imageInfo.Rect,
+                questionmarkPaint,
+                SKTextAlign.Center,
+                VerticalTextAlignment.Center);
         }
 
         var typeIcon = lockerItem.SourceType != SourceType.Other
@@ -274,10 +294,11 @@ public class AccountImageController(
         namePaint.Typeface = fortniteFont;
         namePaint.TextAlign = SKTextAlign.Center;
 
-        var entryNameTextBounds = new SKRect();
-        namePaint.MeasureText(lockerItem.Name, ref entryNameTextBounds);
-        canvas.DrawText(lockerItem.Name, (float)bitmap.Width / 2, bitmap.Height - 59 + entryNameTextBounds.Height,
-            namePaint);
+        canvas.DrawAlignedText(
+            lockerItem.Name,
+            new SKPoint(bitmap.Width / 2f, bitmap.Height - 59),
+            namePaint,
+            SKTextAlign.Center);
 
         using var descriptionPaint = new SKPaint();
         descriptionPaint.IsAntialias = true;
@@ -286,9 +307,11 @@ public class AccountImageController(
         descriptionPaint.Typeface = fortniteFont;
         descriptionPaint.TextAlign = SKTextAlign.Center;
 
-        descriptionPaint.MeasureText(lockerItem.Description, ref entryNameTextBounds);
-        canvas.DrawText(lockerItem.Description, (float)bitmap.Width / 2,
-            bitmap.Height - 42 + entryNameTextBounds.Height, descriptionPaint);
+        canvas.DrawAlignedText(
+            lockerItem.Description,
+            new SKPoint(bitmap.Width / 2f, bitmap.Height - 42),
+            descriptionPaint,
+            SKTextAlign.Center);
 
         using var sourcePaint = new SKPaint();
         sourcePaint.IsAntialias = true;
@@ -299,9 +322,12 @@ public class AccountImageController(
 
         var fontOffset = lockerItem.SourceType == SourceType.Other ? 10 : 42;
 
-        sourcePaint.MeasureText(lockerItem.Source, ref entryNameTextBounds);
-        canvas.DrawText(lockerItem.Source, bitmap.Width - fontOffset, bitmap.Height - entryNameTextBounds.Height + 8,
-            sourcePaint);
+        canvas.DrawAlignedText(
+            lockerItem.Source,
+            new SKPoint(bitmap.Width - fontOffset, bitmap.Height - 7),
+            sourcePaint,
+            SKTextAlign.Right,
+            VerticalTextAlignment.Bottom);
 
         return bitmap;
     }
@@ -342,7 +368,11 @@ public class AccountImageController(
         canvas.DrawRoundRect((50 + 10) * resizeFactor, (imageInfo.Height - 40 * resizeFactor) / 2, 5 * resizeFactor,
             40 * resizeFactor, splitR, splitR, splitPaint);
 
-        canvas.DrawText(text, (50 + 10 + 5 + 10) * resizeFactor, (imageInfo.Height + textBounds.Height) / 2, textPaint);
+        canvas.DrawAlignedText(
+            text,
+            new SKPoint((50 + 10 + 5 + 10) * resizeFactor, imageInfo.Height / 2f),
+            textPaint,
+            verticalAlignment: VerticalTextAlignment.Center);
 
         return bitmap;
     }

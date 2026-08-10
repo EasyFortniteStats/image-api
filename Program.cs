@@ -9,7 +9,11 @@ builder.Services.AddMemoryCache();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<SharedAssets>();
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient().ConfigureHttpClientDefaults(http =>
+{
+    // Prevent unexpectedly large upstream images from being buffered in managed memory.
+    http.ConfigureHttpClient(client => client.MaxResponseContentBufferSize = 16 * 1024 * 1024);
+});
 builder.Services.AddSingleton(new AsyncKeyedLocker<string>(o =>
 {
     o.PoolSize = 64;
