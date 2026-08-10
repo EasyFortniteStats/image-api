@@ -345,8 +345,7 @@ public class AccountImageController(
         //var text = "EasyFnStats.com".ToUpper();
         const string text = "EASYFNSTATS.COM";
 
-        SKRect textBounds;
-        textPaintFont.MeasureText(text, out textBounds, textPaint);
+        textPaintFont.MeasureText(text, out var textBounds, textPaint);
 
         var imageInfo = new SKImageInfo((int)((50 + 10 + 5 + 10) * resizeFactor + textBounds.Width),
             (int)(50 * resizeFactor));

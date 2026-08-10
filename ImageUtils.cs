@@ -28,8 +28,7 @@ public class ImageUtils
         discordTagTextPaintFont.Typeface = segoeFont;
         discordTagTextPaintFont.Size = 25 * resizeFactor;
 
-        SKRect discordTagTextBounds;
-        discordTagTextPaintFont.MeasureText(username, out discordTagTextBounds, discordTagTextPaint);
+        discordTagTextPaintFont.MeasureText(username, out var discordTagTextBounds, discordTagTextPaint);
 
         var imageInfo = new SKImageInfo(
             (int)Math.Min(discordTagTextBounds.Width + (10 + 2 * 15 + 50) * resizeFactor, 459 * resizeFactor),

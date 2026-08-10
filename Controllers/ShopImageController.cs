@@ -553,8 +553,7 @@ public partial class ShopImageController(
         bannerPaintFont.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-76BoldItalic.otf");
         bannerPaint.Color = SKColor.Parse(colors[1]);
 
-        SKRect textBounds;
-        bannerPaintFont.MeasureText(text, out textBounds, bannerPaint);
+        bannerPaintFont.MeasureText(text, out var textBounds, bannerPaint);
         var maxTextWidth = maxWidth - 2 * 13;
 
         var imageInfo = new SKImageInfo(Math.Min(2 * 13 + (int)textBounds.Width, maxWidth), 34);
@@ -781,8 +780,7 @@ public partial class ShopImageController(
         foreach (Match match in matches)
         {
             var line = lines[currentLine];
-            SKRect bounds;
-            paintFont.MeasureText(line + match.Value, out bounds, paint);
+            paintFont.MeasureText(line + match.Value, out var bounds, paint);
             if (bounds.Width > maxWidth) currentLine++;
             if (currentLine >= 2)
             {
@@ -796,8 +794,7 @@ public partial class ShopImageController(
         // Adjust lines that are too long and add ellipsis
         foreach (var line in lines)
         {
-            SKRect textBounds;
-            paintFont.MeasureText(line.ToString(), out textBounds, paint);
+            paintFont.MeasureText(line.ToString(), out var textBounds, paint);
             if (textBounds.Width <= maxWidth) continue;
 
             while (textBounds.Width > maxWidth)
