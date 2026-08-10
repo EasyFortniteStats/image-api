@@ -93,8 +93,7 @@ public class AccountImageController(
         var resize = (int)(50 * uiResizingFactor);
         using var drawIconPaint = new SKPaint();
         drawIconPaint.IsAntialias = true;
-        drawIconPaint.FilterQuality = SKFilterQuality.High;
-        canvas.DrawBitmap(iconBitmap, SKRect.Create(50, 50, resize, resize), drawIconPaint);
+        canvas.DrawBitmap(iconBitmap, SKRect.Create(50, 50, resize, resize), SKSamplingOptions.Default, drawIconPaint);
 
         using var splitPaint = new SKPaint();
         splitPaint.IsAntialias = true;
@@ -106,16 +105,16 @@ public class AccountImageController(
             splitPaint);
 
         using var namePaint = new SKPaint();
+        using var namePaintFont = new SKFont();
         namePaint.IsAntialias = true;
         namePaint.Color = SKColors.White;
-        namePaint.Typeface = segoeFont;
-        namePaint.TextSize = nameFontSize;
-        namePaint.FilterQuality = SKFilterQuality.Medium;
+        namePaintFont.Typeface = segoeFont;
+        namePaintFont.Size = nameFontSize;
 
-        canvas.DrawAlignedText(locker.PlayerName, new SKPoint(50 + resize + splitWidth * 3, 58), namePaint);
+        canvas.DrawAlignedText(locker.PlayerName, new SKPoint(50 + resize + splitWidth * 3, 58), namePaintFont, namePaint);
 
         using var discordBoxBitmap = await ImageUtils.GenerateDiscordBox(assets, locker.UserName, uiResizingFactor);
-        canvas.DrawBitmap(discordBoxBitmap, imageInfo.Width - 50 - discordBoxBitmap.Width, 39);
+        canvas.DrawBitmap(discordBoxBitmap, imageInfo.Width - 50 - discordBoxBitmap.Width, 39, SKSamplingOptions.Default);
 
         var column = 0;
         var row = 0;
@@ -124,7 +123,7 @@ public class AccountImageController(
             canvas.DrawBitmap(
                 item.Image,
                 50 + 256 * column + 25 * column,
-                50 + nameFontSize + 50 + row * 313 + row * 25);
+                50 + nameFontSize + 50 + row * 313 + row * 25, SKSamplingOptions.Default);
             column++;
             if (column != columns) continue;
             column = 0;
@@ -134,7 +133,7 @@ public class AccountImageController(
         // Load Footer.svg file as a stream
         using var footerBitmap = await GenerateFooter(uiResizingFactor);
         canvas.DrawBitmap(footerBitmap, (imageInfo.Width - footerBitmap.Width) / 2.0f,
-            imageInfo.Height - (footerSpace + footerBitmap.Height) / 2.0f);
+            imageInfo.Height - (footerSpace + footerBitmap.Height) / 2.0f, SKSamplingOptions.Default);
 
         return bitmap;
     }
@@ -201,7 +200,7 @@ public class AccountImageController(
                     fileExists = false;
                     try
                     {
-                        itemImage = itemImageRaw.Resize(new SKImageInfo(256, 256), SKFilterQuality.Medium);
+                        itemImage = itemImageRaw.Resize(new SKImageInfo(256, 256), new SKSamplingOptions(SKFilterMode.Linear));
                     }
                     finally
                     {
@@ -250,24 +249,24 @@ public class AccountImageController(
 
         var rarityBackground =
             await assets.GetBitmap($"Assets/Images/Locker/RarityBackgrounds/{lockerItem.Rarity}.png");
-        canvas.DrawBitmap(rarityBackground, SKPoint.Empty);
+        canvas.DrawBitmap(rarityBackground, SKPoint.Empty, SKSamplingOptions.Default);
 
         if (itemImage is not null)
         {
-            canvas.DrawBitmap(itemImage, SKPoint.Empty);
+            canvas.DrawBitmap(itemImage, SKPoint.Empty, SKSamplingOptions.Default);
         }
         else
         {
             using var questionmarkPaint = new SKPaint();
+            using var questionmarkPaintFont = new SKFont();
             questionmarkPaint.IsAntialias = true;
             questionmarkPaint.Color = SKColors.White;
-            questionmarkPaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf");
-            questionmarkPaint.TextSize = 256.0f;
-            questionmarkPaint.TextAlign = SKTextAlign.Center;
+            questionmarkPaintFont.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf");
+            questionmarkPaintFont.Size = 256.0f;
 
             canvas.DrawAlignedText(
                 "?",
-                imageInfo.Rect,
+                imageInfo.Rect, questionmarkPaintFont,
                 questionmarkPaint,
                 SKTextAlign.Center,
                 VerticalTextAlignment.Center);
@@ -277,54 +276,54 @@ public class AccountImageController(
             ? await assets.GetBitmap($"Assets/Images/Locker/Source/{lockerItem.SourceType}.png")
             : null;
         using var overlayImage = ImageUtils.GenerateItemCardOverlay(imageInfo.Width, typeIcon);
-        canvas.DrawBitmap(overlayImage, new SKPoint(0, imageInfo.Height - overlayImage.Height));
+        canvas.DrawBitmap(overlayImage, new SKPoint(0, imageInfo.Height - overlayImage.Height), SKSamplingOptions.Default);
 
         using var rarityStripe =
             ImageUtils.GenerateRarityStripe(imageInfo.Width, SKColor.Parse(lockerItem.RarityColor));
         canvas.DrawBitmap(rarityStripe,
-            new SKPoint(0, imageInfo.Height - overlayImage.Height - rarityStripe.Height + 5));
+            new SKPoint(0, imageInfo.Height - overlayImage.Height - rarityStripe.Height + 5), SKSamplingOptions.Default);
         // TODO: Fix Transparency issues
 
         var fortniteFont = await assets.GetFont("Assets/Fonts/Fortnite.ttf"); // don't dispose
 
         using var namePaint = new SKPaint();
+        using var namePaintFont = new SKFont();
         namePaint.IsAntialias = true;
-        namePaint.TextSize = 18.0f;
+        namePaintFont.Size = 18.0f;
         namePaint.Color = SKColors.White;
-        namePaint.Typeface = fortniteFont;
-        namePaint.TextAlign = SKTextAlign.Center;
+        namePaintFont.Typeface = fortniteFont;
 
         canvas.DrawAlignedText(
             lockerItem.Name,
-            new SKPoint(bitmap.Width / 2f, bitmap.Height - 59),
+            new SKPoint(bitmap.Width / 2f, bitmap.Height - 59), namePaintFont,
             namePaint,
             SKTextAlign.Center);
 
         using var descriptionPaint = new SKPaint();
+        using var descriptionPaintFont = new SKFont();
         descriptionPaint.IsAntialias = true;
-        descriptionPaint.TextSize = 15.0f;
+        descriptionPaintFont.Size = 15.0f;
         descriptionPaint.Color = SKColor.Parse(lockerItem.RarityColor);
-        descriptionPaint.Typeface = fortniteFont;
-        descriptionPaint.TextAlign = SKTextAlign.Center;
+        descriptionPaintFont.Typeface = fortniteFont;
 
         canvas.DrawAlignedText(
             lockerItem.Description,
-            new SKPoint(bitmap.Width / 2f, bitmap.Height - 42),
+            new SKPoint(bitmap.Width / 2f, bitmap.Height - 42), descriptionPaintFont,
             descriptionPaint,
             SKTextAlign.Center);
 
         using var sourcePaint = new SKPaint();
+        using var sourcePaintFont = new SKFont();
         sourcePaint.IsAntialias = true;
-        sourcePaint.TextSize = 15.0f;
+        sourcePaintFont.Size = 15.0f;
         sourcePaint.Color = SKColors.White;
-        sourcePaint.Typeface = fortniteFont;
-        sourcePaint.TextAlign = SKTextAlign.Right;
+        sourcePaintFont.Typeface = fortniteFont;
 
         var fontOffset = lockerItem.SourceType == SourceType.Other ? 10 : 42;
 
         canvas.DrawAlignedText(
             lockerItem.Source,
-            new SKPoint(bitmap.Width - fontOffset, bitmap.Height - 7),
+            new SKPoint(bitmap.Width - fontOffset, bitmap.Height - 7), sourcePaintFont,
             sourcePaint,
             SKTextAlign.Right,
             VerticalTextAlignment.Bottom);
@@ -337,16 +336,16 @@ public class AccountImageController(
         var poppinsFont = await assets.GetFont("Assets/Fonts/Poppins.ttf"); // don't dispose
 
         using var textPaint = new SKPaint();
+        using var textPaintFont = new SKFont();
         textPaint.IsAntialias = true;
-        textPaint.TextSize = 40.0f * resizeFactor;
+        textPaintFont.Size = 40.0f * resizeFactor;
         textPaint.Color = SKColors.White;
-        textPaint.Typeface = poppinsFont;
+        textPaintFont.Typeface = poppinsFont;
 
         //var text = "EasyFnStats.com".ToUpper();
         const string text = "EASYFNSTATS.COM";
 
-        var textBounds = new SKRect();
-        textPaint.MeasureText(text, ref textBounds);
+        textPaintFont.MeasureText(text, out var textBounds, textPaint);
 
         var imageInfo = new SKImageInfo((int)((50 + 10 + 5 + 10) * resizeFactor + textBounds.Width),
             (int)(50 * resizeFactor));
@@ -357,8 +356,7 @@ public class AccountImageController(
 
         using var drawLogoPaint = new SKPaint();
         drawLogoPaint.IsAntialias = true;
-        drawLogoPaint.FilterQuality = SKFilterQuality.High;
-        canvas.DrawBitmap(logoBitmap, SKRect.Create(0, 0, imageInfo.Height, imageInfo.Height), drawLogoPaint);
+        canvas.DrawBitmap(logoBitmap, SKRect.Create(0, 0, imageInfo.Height, imageInfo.Height), SKSamplingOptions.Default, drawLogoPaint);
 
         var splitR = 3 * resizeFactor;
 
@@ -370,7 +368,7 @@ public class AccountImageController(
 
         canvas.DrawAlignedText(
             text,
-            new SKPoint((50 + 10 + 5 + 10) * resizeFactor, imageInfo.Height / 2f),
+            new SKPoint((50 + 10 + 5 + 10) * resizeFactor, imageInfo.Height / 2f), textPaintFont,
             textPaint,
             verticalAlignment: VerticalTextAlignment.Center);
 

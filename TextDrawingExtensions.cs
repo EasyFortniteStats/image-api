@@ -16,35 +16,27 @@ public static class TextDrawingExtensions
     {
         public void DrawAlignedText(string text,
             SKPoint anchor,
+            SKFont font,
             SKPaint paint,
             SKTextAlign horizontalAlignment = SKTextAlign.Left,
             VerticalTextAlignment verticalAlignment = VerticalTextAlignment.Top)
-    {
-        var bounds = new SKRect();
-        paint.MeasureText(text, ref bounds);
-        var baseline = verticalAlignment switch
         {
-            VerticalTextAlignment.Top => anchor.Y - bounds.Top,
-            VerticalTextAlignment.Center => anchor.Y - bounds.MidY,
-            VerticalTextAlignment.Baseline => anchor.Y,
-            VerticalTextAlignment.Bottom => anchor.Y - bounds.Bottom,
-            _ => throw new ArgumentOutOfRangeException(nameof(verticalAlignment), verticalAlignment, null)
-        };
+            font.MeasureText(text, out var bounds, paint);
+            var baseline = verticalAlignment switch
+            {
+                VerticalTextAlignment.Top => anchor.Y - bounds.Top,
+                VerticalTextAlignment.Center => anchor.Y - bounds.MidY,
+                VerticalTextAlignment.Baseline => anchor.Y,
+                VerticalTextAlignment.Bottom => anchor.Y - bounds.Bottom,
+                _ => throw new ArgumentOutOfRangeException(nameof(verticalAlignment), verticalAlignment, null)
+            };
 
-            var previousAlignment = paint.TextAlign;
-            try
-            {
-                paint.TextAlign = horizontalAlignment;
-                canvas.DrawText(text, anchor.X, baseline, paint);
-            }
-            finally
-            {
-                paint.TextAlign = previousAlignment;
-            }
-    }
+            canvas.DrawText(text, anchor.X, baseline, horizontalAlignment, font, paint);
+        }
 
         public void DrawAlignedText(string text,
             SKRect area,
+            SKFont font,
             SKPaint paint,
             SKTextAlign horizontalAlignment = SKTextAlign.Left,
             VerticalTextAlignment verticalAlignment = VerticalTextAlignment.Top)
@@ -66,7 +58,7 @@ public static class TextDrawingExtensions
                 _ => throw new ArgumentOutOfRangeException(nameof(verticalAlignment), verticalAlignment, null)
             };
 
-            canvas.DrawAlignedText(text, new SKPoint(x, y), paint, horizontalAlignment, verticalAlignment);
+            canvas.DrawAlignedText(text, new SKPoint(x, y), font, paint, horizontalAlignment, verticalAlignment);
         }
     }
 }
