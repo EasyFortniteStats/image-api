@@ -70,10 +70,10 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             using var backgroundPaint = new SKPaintSafe();
             backgroundPaint.IsAntialias = true;
             backgroundPaint.Shader = SKShader.CreateRadialGradient(
-                    new SKPoint(imageInfo.Rect.MidX, imageInfo.Rect.MidY),
-                    MathF.Sqrt(MathF.Pow(imageInfo.Rect.MidX, 2) + MathF.Pow(imageInfo.Rect.MidY, 2)),
-                    [new SKColor(41, 165, 224), new SKColor(9, 66, 180)],
-                    SKShaderTileMode.Clamp);
+                new SKPoint(imageInfo.Rect.MidX, imageInfo.Rect.MidY),
+                MathF.Sqrt(MathF.Pow(imageInfo.Rect.MidX, 2) + MathF.Pow(imageInfo.Rect.MidY, 2)),
+                [new SKColor(41, 165, 224), new SKColor(9, 66, 180)],
+                SKShaderTileMode.Clamp);
 
             canvas.DrawRoundRect(0, 0, imageInfo.Width, imageInfo.Height, 50, 50, backgroundPaint);
         }
@@ -84,8 +84,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
             canvas.Save();
             canvas.ClipRoundRect(new SKRoundRect(imageInfo.Rect, 50), antialias: true);
-            canvas.DrawBitmap(customBackgroundBitmap, imageInfo.Rect,
-                new SKSamplingOptions(SKFilterMode.Linear), backgroundImagePaint);
+            canvas.DrawBitmap(customBackgroundBitmap, imageInfo.Rect, SKSamplingOptions.Default, backgroundImagePaint);
             canvas.Restore();
         }
 
@@ -103,27 +102,25 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
 
         using var competitiveBoxTitlePaint = new SKPaint();
+        using var competitiveBoxTitlePaintFont = new SKFont();
         competitiveBoxTitlePaint.IsAntialias = true;
         competitiveBoxTitlePaint.Color = SKColors.White;
-        using var competitiveBoxTitlePaintFont = new SKFont();
         competitiveBoxTitlePaintFont.Typeface = fortniteFont;
         competitiveBoxTitlePaintFont.Size = 25;
 
         using var boxTitlePaint = new SKPaint();
+        using var boxTitlePaintFont = new SKFont();
         boxTitlePaint.IsAntialias = true;
         boxTitlePaint.Color = SKColors.White;
-        using var boxTitlePaintFont = new SKFont();
         boxTitlePaintFont.Typeface = fortniteFont;
         boxTitlePaintFont.Size = 50;
 
         using var titlePaint = new SKPaint();
+        using var titlePaintFont = new SKFont();
         titlePaint.IsAntialias = true;
         titlePaint.Color = SKColors.LightGray;
-        using var titlePaintFont = new SKFont();
         titlePaintFont.Typeface = segoeFont;
         titlePaintFont.Size = 20;
-
-        SKRect textBounds;
 
         if (type == StatsType.Competitive)
         {
@@ -152,29 +149,21 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             var zeroBuildLogo = await assets.GetBitmap("Assets/Images/Stats/ZeroBuildLogo.png"); // don't dispose
             canvas.DrawBitmap(zeroBuildLogo, new SKPoint(317, 277), SKSamplingOptions.Default);
 
-            competitiveBoxTitlePaintFont.MeasureText("OVERALL", out textBounds, competitiveBoxTitlePaint);
-            canvas.DrawText("OVERALL", 211, 305 - textBounds.Top, SKTextAlign.Left, competitiveBoxTitlePaintFont, competitiveBoxTitlePaint);
+            canvas.DrawAlignedText("OVERALL", new SKPoint(211, 305), competitiveBoxTitlePaintFont, competitiveBoxTitlePaint);
 
-            titlePaintFont.MeasureText("Earnings", out textBounds, titlePaint);
-            canvas.DrawText("Earnings", 70, 338 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Earnings", new SKPoint(70, 338), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Power Ranking", out textBounds, titlePaint);
-            canvas.DrawText("Power Ranking", 250, 338 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Power Ranking", new SKPoint(250, 338), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Games", out textBounds, titlePaint);
-            canvas.DrawText("Games", 70, 414 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Games", new SKPoint(70, 414), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Wins", out textBounds, titlePaint);
-            canvas.DrawText("Wins", 231, 414 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Wins", new SKPoint(231, 414), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Win%", out textBounds, titlePaint);
-            canvas.DrawText("Win%", 370, 414 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Win%", new SKPoint(370, 414), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Kills", out textBounds, titlePaint);
-            canvas.DrawText("Kills", 70, 491 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Kills", new SKPoint(70, 491), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("K/D", out textBounds, titlePaint);
-            canvas.DrawText("K/D", 231, 491 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("K/D", new SKPoint(231, 491), titlePaintFont, titlePaint);
         }
         else
         {
@@ -182,38 +171,27 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             DrawBlurredRoundRect(bitmap, overallBoxRect);
             canvas.DrawRoundRect(overallBoxRect, boxPaint);
 
-            boxTitlePaintFont.MeasureText("OVERALL", out textBounds, boxTitlePaint);
-            canvas.DrawText("OVERALL", 60, 134 - textBounds.Top, SKTextAlign.Left, boxTitlePaintFont, boxTitlePaint);
+            canvas.DrawAlignedText("OVERALL", new SKPoint(60, 134), boxTitlePaintFont, boxTitlePaint);
 
-            titlePaintFont.MeasureText("Games", out textBounds, titlePaint);
-            canvas.DrawText("Games", 70, 184 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Games", new SKPoint(70, 184), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Wins", out textBounds, titlePaint);
-            canvas.DrawText("Wins", 231, 184 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Wins", new SKPoint(231, 184), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Win%", out textBounds, titlePaint);
-            canvas.DrawText("Win%", 370, 184 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Win%", new SKPoint(370, 184), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Kills", out textBounds, titlePaint);
-            canvas.DrawText("Kills", 70, 261 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Kills", new SKPoint(70, 261), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("K/D", out textBounds, titlePaint);
-            canvas.DrawText("K/D", 231, 261 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("K/D", new SKPoint(231, 261), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Playtime since Season 7", out textBounds, titlePaint);
-            canvas.DrawText("Playtime since Season 7", 70, 338 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Playtime since Season 7", new SKPoint(70, 338), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("days", out textBounds, titlePaint);
-            canvas.DrawText("days", 70, 397 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("days", new SKPoint(70, 397), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("hours", out textBounds, titlePaint);
-            canvas.DrawText("hours", 147, 397 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("hours", new SKPoint(147, 397), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("minutes", out textBounds, titlePaint);
-            canvas.DrawText("minutes", 231, 397 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("minutes", new SKPoint(231, 397), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("BattlePass Level", out textBounds, titlePaint);
-            canvas.DrawText("BattlePass Level", 70, 442 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("BattlePass Level", new SKPoint(70, 442), titlePaintFont, titlePaint);
 
             using var battlePassBarBackgroundPaint = new SKPaint();
             battlePassBarBackgroundPaint.IsAntialias = true;
@@ -226,116 +204,88 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         DrawBlurredRoundRect(bitmap, soloBoxRect);
         canvas.DrawRoundRect(soloBoxRect, boxPaint);
 
-        boxTitlePaintFont.MeasureText("SOLO", out textBounds, boxTitlePaint);
-        canvas.DrawText("SOLO", 527, 134 - textBounds.Top, SKTextAlign.Left, boxTitlePaintFont, boxTitlePaint);
+        canvas.DrawAlignedText("SOLO", new SKPoint(527, 134), boxTitlePaintFont, boxTitlePaint);
 
         var soloIcon = await assets.GetBitmap("Assets/Images/Stats/PlaylistIcons/solo.png"); // don't dispose
         canvas.DrawBitmap(soloIcon, new SKPoint(648, 134), SKSamplingOptions.Default);
 
-        titlePaintFont.MeasureText("Games", out textBounds, titlePaint);
-        canvas.DrawText("Games", 537, 184 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Games", new SKPoint(537, 184), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Wins", out textBounds, titlePaint);
-        canvas.DrawText("Wins", 698, 184 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Wins", new SKPoint(698, 184), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Win%", out textBounds, titlePaint);
-        canvas.DrawText("Win%", 837, 184 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Win%", new SKPoint(837, 184), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Kills", out textBounds, titlePaint);
-        canvas.DrawText("Kills", 537, 261 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Kills", new SKPoint(537, 261), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("K/D", out textBounds, titlePaint);
-        canvas.DrawText("K/D", 698, 261 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("K/D", new SKPoint(698, 261), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Top 25", out textBounds, titlePaint);
-        canvas.DrawText("Top 25", 837, 261 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Top 25", new SKPoint(837, 261), titlePaintFont, titlePaint);
 
         // Duos
         var duosBoxRect = new SKRoundRect(SKRect.Create(996, 159, 459, 185), 30);
         DrawBlurredRoundRect(bitmap, duosBoxRect);
         canvas.DrawRoundRect(duosBoxRect, boxPaint);
 
-        boxTitlePaintFont.MeasureText("DUOS", out textBounds, boxTitlePaint);
-        canvas.DrawText("DUOS", 1006, 134 - textBounds.Top, SKTextAlign.Left, boxTitlePaintFont, boxTitlePaint);
+        canvas.DrawAlignedText("DUOS", new SKPoint(1006, 134), boxTitlePaintFont, boxTitlePaint);
 
         var duosIcon = await assets.GetBitmap("Assets/Images/Stats/PlaylistIcons/duos.png"); // don't dispose
         canvas.DrawBitmap(duosIcon, new SKPoint(1133, 134), SKSamplingOptions.Default);
 
-        titlePaintFont.MeasureText("Games", out textBounds, titlePaint);
-        canvas.DrawText("Games", 1016, 184 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Games", new SKPoint(1016, 184), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Wins", out textBounds, titlePaint);
-        canvas.DrawText("Wins", 1177, 184 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Wins", new SKPoint(1177, 184), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Win%", out textBounds, titlePaint);
-        canvas.DrawText("Win%", 1316, 184 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Win%", new SKPoint(1316, 184), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Kills", out textBounds, titlePaint);
-        canvas.DrawText("Kills", 1016, 261 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Kills", new SKPoint(1016, 261), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("K/D", out textBounds, titlePaint);
-        canvas.DrawText("K/D", 1177, 261 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("K/D", new SKPoint(1177, 261), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Top 12", out textBounds, titlePaint);
-        canvas.DrawText("Top 12", 1316, 261 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Top 12", new SKPoint(1316, 261), titlePaintFont, titlePaint);
 
         // Trios
         var triosBoxRect = new SKRoundRect(SKRect.Create(517, 389, 459, 185), 30);
         DrawBlurredRoundRect(bitmap, triosBoxRect);
         canvas.DrawRoundRect(triosBoxRect, boxPaint);
 
-        boxTitlePaintFont.MeasureText("TRIOS", out textBounds, boxTitlePaint);
-        canvas.DrawText("TRIOS", 527, 364 - textBounds.Top, SKTextAlign.Left, boxTitlePaintFont, boxTitlePaint);
+        canvas.DrawAlignedText("TRIOS", new SKPoint(527, 364), boxTitlePaintFont, boxTitlePaint);
 
         var triosIcon = await assets.GetBitmap(@"Assets/Images/Stats/PlaylistIcons/trios.png"); // don't dispose
         canvas.DrawBitmap(triosIcon, new SKPoint(663, 364), SKSamplingOptions.Default);
 
-        titlePaintFont.MeasureText("Games", out textBounds, titlePaint);
-        canvas.DrawText("Games", 537, 414 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Games", new SKPoint(537, 414), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Wins", out textBounds, titlePaint);
-        canvas.DrawText("Wins", 698, 414 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Wins", new SKPoint(698, 414), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Win%", out textBounds, titlePaint);
-        canvas.DrawText("Win%", 837, 414 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Win%", new SKPoint(837, 414), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Kills", out textBounds, titlePaint);
-        canvas.DrawText("Kills", 537, 491 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Kills", new SKPoint(537, 491), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("K/D", out textBounds, titlePaint);
-        canvas.DrawText("K/D", 698, 491 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("K/D", new SKPoint(698, 491), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Top 6", out textBounds, titlePaint);
-        canvas.DrawText("Top 6", 837, 491 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Top 6", new SKPoint(837, 491), titlePaintFont, titlePaint);
 
         // Squads
         var squadsBoxRect = new SKRoundRect(SKRect.Create(996, 389, 459, 185), 30);
         DrawBlurredRoundRect(bitmap, squadsBoxRect);
         canvas.DrawRoundRect(squadsBoxRect, boxPaint);
 
-        boxTitlePaintFont.MeasureText("SQUADS", out textBounds, boxTitlePaint);
-        canvas.DrawText("SQUADS", 1006, 364 - textBounds.Top, SKTextAlign.Left, boxTitlePaintFont, boxTitlePaint);
+        canvas.DrawAlignedText("SQUADS", new SKPoint(1006, 364), boxTitlePaintFont, boxTitlePaint);
 
         var squadsIcon = await assets.GetBitmap(@"Assets/Images/Stats/PlaylistIcons/squads.png"); // don't dispose
         canvas.DrawBitmap(squadsIcon, new SKPoint(1191, 364), SKSamplingOptions.Default);
 
-        titlePaintFont.MeasureText("Games", out textBounds, titlePaint);
-        canvas.DrawText("Games", 1016, 414 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Games", new SKPoint(1016, 414), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Wins", out textBounds, titlePaint);
-        canvas.DrawText("Wins", 1177, 414 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Wins", new SKPoint(1177, 414), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Win%", out textBounds, titlePaint);
-        canvas.DrawText("Win%", 1316, 414 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Win%", new SKPoint(1316, 414), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Kills", out textBounds, titlePaint);
-        canvas.DrawText("Kills", 1016, 491 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Kills", new SKPoint(1016, 491), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("K/D", out textBounds, titlePaint);
-        canvas.DrawText("K/D", 1177, 491 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("K/D", new SKPoint(1177, 491), titlePaintFont, titlePaint);
 
-        titlePaintFont.MeasureText("Top 6", out textBounds, titlePaint);
-        canvas.DrawText("Top 6", 1316, 491 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+        canvas.DrawAlignedText("Top 6", new SKPoint(1316, 491), titlePaintFont, titlePaint);
 
         if (type == StatsType.Normal)
         {
@@ -344,26 +294,20 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             DrawBlurredRoundRect(bitmap, teamsBoxRect);
             canvas.DrawRoundRect(teamsBoxRect, boxPaint);
 
-            boxTitlePaintFont.MeasureText("TEAMS", out textBounds, boxTitlePaint);
-            canvas.DrawText("TEAMS", 527, 594 - textBounds.Top, SKTextAlign.Left, boxTitlePaintFont, boxTitlePaint);
+            canvas.DrawAlignedText("TEAMS", new SKPoint(527, 594), boxTitlePaintFont, boxTitlePaint);
 
             var teamsIcon = await assets.GetBitmap("Assets/Images/Stats/PlaylistIcons/teams.png"); // don't dispose
             canvas.DrawBitmap(teamsIcon, new SKPoint(683, 594), SKSamplingOptions.Default);
 
-            titlePaintFont.MeasureText("Games", out textBounds, titlePaint);
-            canvas.DrawText("Games", 537, 644 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Games", new SKPoint(537, 644), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Wins", out textBounds, titlePaint);
-            canvas.DrawText("Wins", 698, 644 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Wins", new SKPoint(698, 644), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Win%", out textBounds, titlePaint);
-            canvas.DrawText("Win%", 837, 644 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Win%", new SKPoint(837, 644), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("Kills", out textBounds, titlePaint);
-            canvas.DrawText("Kills", 954, 644 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("Kills", new SKPoint(954, 644), titlePaintFont, titlePaint);
 
-            titlePaintFont.MeasureText("K/D", out textBounds, titlePaint);
-            canvas.DrawText("K/D", 1115, 644 - textBounds.Top, SKTextAlign.Left, titlePaintFont, titlePaint);
+            canvas.DrawAlignedText("K/D", new SKPoint(1115, 644), titlePaintFont, titlePaint);
         }
 
         return bitmap;
@@ -381,44 +325,44 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
 
         using var namePaint = new SKPaint();
+        using var namePaintFont = new SKFont();
         namePaint.IsAntialias = true;
         namePaint.Color = SKColors.White;
-        using var namePaintFont = new SKFont();
         namePaintFont.Typeface = segoeFont;
         namePaintFont.Size = 64;
 
         using var titlePaint = new SKPaint();
+        using var titlePaintFont = new SKFont();
         titlePaint.IsAntialias = true;
         titlePaint.Color = SKColors.LightGray;
-        using var titlePaintFont = new SKFont();
         titlePaintFont.Typeface = segoeFont;
         titlePaintFont.Size = 20;
 
         using var valuePaint = new SKPaint();
+        using var valuePaintFont = new SKFont();
         valuePaint.IsAntialias = true;
         valuePaint.Color = SKColors.White;
-        using var valuePaintFont = new SKFont();
         valuePaintFont.Typeface = fortniteFont;
         valuePaintFont.Size = 35;
 
         using var divisionPaint = new SKPaint();
+        using var divisionPaintFont = new SKFont();
         divisionPaint.IsAntialias = true;
         divisionPaint.Color = SKColors.White;
-        using var divisionPaintFont = new SKFont();
         divisionPaintFont.Typeface = fortniteFont;
         divisionPaintFont.Size = 35;
 
         using var rankProgressPaint = new SKPaint();
+        using var rankProgressPaintFont = new SKFont();
         rankProgressPaint.IsAntialias = true;
         rankProgressPaint.Color = SKColors.White.WithAlpha((int)(255 * 0.7));
-        using var rankProgressPaintFont = new SKFont();
         rankProgressPaintFont.Typeface = segoeFont;
         rankProgressPaintFont.Size = 16;
 
         using var rankingPaint = new SKPaint();
+        using var rankingPaintFont = new SKFont();
         rankingPaint.IsAntialias = true;
         rankingPaint.Color = SKColors.White;
-        using var rankingPaintFont = new SKFont();
         rankingPaintFont.Typeface = fortniteFont;
         rankingPaintFont.Size = 20;
 
@@ -426,14 +370,13 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             await assets.GetBitmap($"Assets/Images/Stats/InputTypes/{stats.InputType}.png"); // don't dispose
         canvas.DrawBitmap(inputIcon, 50, 50, SKSamplingOptions.Default);
 
-        namePaintFont.MeasureText(stats.PlayerName, out var textBounds, namePaint);
-        canvas.DrawText(stats.PlayerName, 159, 58 - textBounds.Top,
-            SKTextAlign.Left, namePaintFont, namePaint);
+        var playerNameWidth = namePaintFont.MeasureText(stats.PlayerName, namePaint);
+        canvas.DrawAlignedText(stats.PlayerName, new SKPoint(159, 58), namePaintFont, namePaint);
 
         if (stats.IsVerified)
         {
             var verifiedIcon = await assets.GetBitmap("Assets/Images/Stats/Verified.png"); // don't dispose
-            canvas.DrawBitmap(verifiedIcon, 159 + textBounds.Width + 5, 47, SKSamplingOptions.Default);
+            canvas.DrawBitmap(verifiedIcon, 159 + playerNameWidth + 5, 47, SKSamplingOptions.Default);
 
             using var discordBoxBitmap = await ImageUtils.GenerateDiscordBox(assets, stats.UserName ?? "???#0000");
             canvas.DrawBitmap(discordBoxBitmap, imageInfo.Width - 50 - discordBoxBitmap.Width, 39, SKSamplingOptions.Default);
@@ -457,16 +400,18 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
                         $"Assets/Images/Stats/DivisionIcons/{divisionAssetName}.png"); // don't dispose
                 canvas.DrawBitmap(divisionIconBitmap, x - divisionIconBitmap!.Width / 2f, 109, SKSamplingOptions.Default);
 
-                divisionPaintFont.MeasureText(rankedStatsEntry.CurrentDivisionName, out textBounds, divisionPaint);
-                canvas.DrawText(rankedStatsEntry.CurrentDivisionName, x - (int)(textBounds.Width / 2),
-                    206 - textBounds.Top, SKTextAlign.Left, divisionPaintFont, divisionPaint);
+                canvas.DrawAlignedText(
+                    rankedStatsEntry.CurrentDivisionName,
+                    new SKPoint(x, 206), divisionPaintFont,
+                    divisionPaint,
+                    SKTextAlign.Center);
 
                 if (rankedStatsEntry.Ranking is null)
                 {
                     const int maxBarWidth = 130, barHeight = 6;
                     var progressText = $"{(int)(rankedStatsEntry.Progress * 100)}%";
-                    rankProgressPaintFont.MeasureText(progressText, out textBounds, rankProgressPaint);
-                    var barX = x - textBounds.Width / 2f - maxBarWidth / 2f;
+                    var progressTextWidth = rankProgressPaintFont.MeasureText(progressText, rankProgressPaint);
+                    var barX = x - progressTextWidth / 2f - maxBarWidth / 2f;
 
                     using var barBackgroundPaint = new SKPaint();
                     barBackgroundPaint.IsAntialias = true;
@@ -480,76 +425,63 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
                         using var battlePassBarPaint = new SKPaintSafe();
                         battlePassBarPaint.IsAntialias = true;
                         battlePassBarPaint.Shader = SKShader.CreateLinearGradient(
-                                new SKPoint(barX, 0),
-                                new SKPoint(barX + rankProgressBarWidth, 0),
-                                [
+                            new SKPoint(barX, 0),
+                            new SKPoint(barX + rankProgressBarWidth, 0),
+                            [
                                 SKColor.Parse(stats.BattlePassLevelBarColors[0]),
                                 SKColor.Parse(stats.BattlePassLevelBarColors[1])
-                                ],
-                                [0, 1],
-                                SKShaderTileMode.Repeat);
+                            ],
+                            [0, 1],
+                            SKShaderTileMode.Repeat);
                         canvas.DrawRoundRect(barX, 250, rankProgressBarWidth, barHeight, 10, 10, battlePassBarPaint);
                     }
 
-                    canvas.DrawText(progressText, barX + maxBarWidth + 7, 247 - textBounds.Top, SKTextAlign.Left, rankProgressPaintFont, rankProgressPaint);
+                    canvas.DrawAlignedText(progressText, new SKPoint(barX + maxBarWidth + 7, 247), rankProgressPaintFont, rankProgressPaint);
                 }
                 else
                 {
-                    rankingPaintFont.MeasureText(rankedStatsEntry.Ranking, out textBounds, rankingPaint);
-                    canvas.DrawText(rankedStatsEntry.Ranking, x - (int)(textBounds.Width / 2), 245 - textBounds.Top, SKTextAlign.Left, rankingPaintFont, rankingPaint);
+                    canvas.DrawAlignedText(
+                        rankedStatsEntry.Ranking,
+                        new SKPoint(x, 245), rankingPaintFont,
+                        rankingPaint,
+                        SKTextAlign.Center);
                 }
             }
 
-            valuePaintFont.MeasureText(stats.Competitive.Earnings, out textBounds, valuePaint);
-            canvas.DrawText(stats.Competitive.Earnings, 70, 365 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Competitive.Earnings, new SKPoint(70, 365), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Competitive.PowerRanking, out textBounds, valuePaint);
-            canvas.DrawText(stats.Competitive.PowerRanking, 250, 365 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Competitive.PowerRanking, new SKPoint(250, 365), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Overall.MatchesPlayed, out textBounds, valuePaint);
-            canvas.DrawText(stats.Overall.MatchesPlayed, 70, 441 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.MatchesPlayed, new SKPoint(70, 441), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Overall.Wins, out textBounds, valuePaint);
-            canvas.DrawText(stats.Overall.Wins, 231, 441 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.Wins, new SKPoint(231, 441), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Overall.WinRatio, out textBounds, valuePaint);
-            canvas.DrawText(stats.Overall.WinRatio, 370, 441 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.WinRatio, new SKPoint(370, 441), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Overall.Kills, out textBounds, valuePaint);
-            canvas.DrawText(stats.Overall.Kills, 70, 518 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.Kills, new SKPoint(70, 518), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Overall.KD, out textBounds, valuePaint);
-            canvas.DrawText(stats.Overall.KD, 231, 518 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.KD, new SKPoint(231, 518), valuePaintFont, valuePaint);
         }
         else
         {
-            valuePaintFont.MeasureText(stats.Overall.MatchesPlayed, out textBounds, valuePaint);
-            canvas.DrawText(stats.Overall.MatchesPlayed, 70, 211 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.MatchesPlayed, new SKPoint(70, 211), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Overall.Wins, out textBounds, valuePaint);
-            canvas.DrawText(stats.Overall.Wins, 231, 211 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.Wins, new SKPoint(231, 211), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Overall.WinRatio, out textBounds, valuePaint);
-            canvas.DrawText(stats.Overall.WinRatio, 370, 211 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.WinRatio, new SKPoint(370, 211), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Overall.Kills, out textBounds, valuePaint);
-            canvas.DrawText(stats.Overall.Kills, 70, 288 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.Kills, new SKPoint(70, 288), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Overall.KD, out textBounds, valuePaint);
-            canvas.DrawText(stats.Overall.KD, 231, 288 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.KD, new SKPoint(231, 288), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Playtime.Days, out textBounds, valuePaint);
-            canvas.DrawText(stats.Playtime.Days, 70, 369 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Playtime.Days, new SKPoint(70, 369), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Playtime.Hours, out textBounds, valuePaint);
-            canvas.DrawText(stats.Playtime.Hours, 147, 369 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Playtime.Hours, new SKPoint(147, 369), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Playtime.Minutes, out textBounds, valuePaint);
-            canvas.DrawText(stats.Playtime.Minutes, 213, 369 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Playtime.Minutes, new SKPoint(213, 369), valuePaintFont, valuePaint);
 
             var battlePassLevel = ((int)stats.BattlePassLevel).ToString();
-            valuePaintFont.MeasureText(battlePassLevel, out textBounds, valuePaint);
-            canvas.DrawText(battlePassLevel, 70, 479 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(battlePassLevel, new SKPoint(70, 479), valuePaintFont, valuePaint);
 
             const int maxBarWidth = 309, barHeight = 20;
 
@@ -560,110 +492,81 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
                 using var battlePassBarPaint = new SKPaintSafe();
                 battlePassBarPaint.IsAntialias = true;
                 battlePassBarPaint.Shader = SKShader.CreateLinearGradient(
-                        new SKPoint(158, 0),
-                        new SKPoint(158 + battlePassBarWidth, 0),
-                        [
+                    new SKPoint(158, 0),
+                    new SKPoint(158 + battlePassBarWidth, 0),
+                    [
                         SKColor.Parse(stats.BattlePassLevelBarColors[0]),
                         SKColor.Parse(stats.BattlePassLevelBarColors[1])
-                        ],
-                        [0, 1],
-                        SKShaderTileMode.Repeat);
+                    ],
+                    [0, 1],
+                    SKShaderTileMode.Repeat);
 
                 canvas.DrawRoundRect(158, 483, battlePassBarWidth, barHeight, 10, 10, battlePassBarPaint);
             }
         }
 
-        valuePaintFont.MeasureText(stats.Solo.MatchesPlayed, out textBounds, valuePaint);
-        canvas.DrawText(stats.Solo.MatchesPlayed, 537, 211 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.MatchesPlayed, new SKPoint(537, 211), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Solo.Wins, out textBounds, valuePaint);
-        canvas.DrawText(stats.Solo.Wins, 698, 211 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.Wins, new SKPoint(698, 211), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Solo.WinRatio, out textBounds, valuePaint);
-        canvas.DrawText(stats.Solo.WinRatio, 837, 211 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.WinRatio, new SKPoint(837, 211), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Solo.Kills, out textBounds, valuePaint);
-        canvas.DrawText(stats.Solo.Kills, 537, 288 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.Kills, new SKPoint(537, 288), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Solo.KD, out textBounds, valuePaint);
-        canvas.DrawText(stats.Solo.KD, 698, 288 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.KD, new SKPoint(698, 288), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Solo.Top25, out textBounds, valuePaint);
-        canvas.DrawText(stats.Solo.Top25, 837, 288 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.Top25!, new SKPoint(837, 288), valuePaintFont, valuePaint);
 
 
-        valuePaintFont.MeasureText(stats.Duos.MatchesPlayed, out textBounds, valuePaint);
-        canvas.DrawText(stats.Duos.MatchesPlayed, 1016, 211 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.MatchesPlayed, new SKPoint(1016, 211), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Duos.Wins, out textBounds, valuePaint);
-        canvas.DrawText(stats.Duos.Wins, 1177, 211 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.Wins, new SKPoint(1177, 211), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Duos.WinRatio, out textBounds, valuePaint);
-        canvas.DrawText(stats.Duos.WinRatio, 1316, 211 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.WinRatio, new SKPoint(1316, 211), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Duos.Kills, out textBounds, valuePaint);
-        canvas.DrawText(stats.Duos.Kills, 1016, 288 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.Kills, new SKPoint(1016, 288), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Duos.KD, out textBounds, valuePaint);
-        canvas.DrawText(stats.Duos.KD, 1177, 288 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.KD, new SKPoint(1177, 288), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Duos.Top12, out textBounds, valuePaint);
-        canvas.DrawText(stats.Duos.Top12, 1316, 288 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.Top12!, new SKPoint(1316, 288), valuePaintFont, valuePaint);
 
 
-        valuePaintFont.MeasureText(stats.Trios.MatchesPlayed, out textBounds, valuePaint);
-        canvas.DrawText(stats.Trios.MatchesPlayed, 537, 441 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.MatchesPlayed, new SKPoint(537, 441), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Trios.Wins, out textBounds, valuePaint);
-        canvas.DrawText(stats.Trios.Wins, 698, 441 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.Wins, new SKPoint(698, 441), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Trios.WinRatio, out textBounds, valuePaint);
-        canvas.DrawText(stats.Trios.WinRatio, 837, 441 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.WinRatio, new SKPoint(837, 441), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Trios.Kills, out textBounds, valuePaint);
-        canvas.DrawText(stats.Trios.Kills, 537, 518 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.Kills, new SKPoint(537, 518), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Trios.KD, out textBounds, valuePaint);
-        canvas.DrawText(stats.Trios.KD, 698, 518 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.KD, new SKPoint(698, 518), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Trios.Top6, out textBounds, valuePaint);
-        canvas.DrawText(stats.Trios.Top6, 837, 518 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.Top6!, new SKPoint(837, 518), valuePaintFont, valuePaint);
 
 
-        valuePaintFont.MeasureText(stats.Squads.MatchesPlayed, out textBounds, valuePaint);
-        canvas.DrawText(stats.Squads.MatchesPlayed, 1016, 441 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.MatchesPlayed, new SKPoint(1016, 441), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Squads.Wins, out textBounds, valuePaint);
-        canvas.DrawText(stats.Squads.Wins, 1177, 441 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.Wins, new SKPoint(1177, 441), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Squads.WinRatio, out textBounds, valuePaint);
-        canvas.DrawText(stats.Squads.WinRatio, 1316, 441 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.WinRatio, new SKPoint(1316, 441), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Squads.Kills, out textBounds, valuePaint);
-        canvas.DrawText(stats.Squads.Kills, 1016, 518 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.Kills, new SKPoint(1016, 518), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Squads.KD, out textBounds, valuePaint);
-        canvas.DrawText(stats.Squads.KD, 1177, 518 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.KD, new SKPoint(1177, 518), valuePaintFont, valuePaint);
 
-        valuePaintFont.MeasureText(stats.Squads.Top6, out textBounds, valuePaint);
-        canvas.DrawText(stats.Squads.Top6, 1316, 518 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.Top6!, new SKPoint(1316, 518), valuePaintFont, valuePaint);
 
         if (type == StatsType.Normal && stats.Teams is not null)
         {
-            valuePaintFont.MeasureText(stats.Teams.MatchesPlayed, out textBounds, valuePaint);
-            canvas.DrawText(stats.Teams.MatchesPlayed, 537, 671 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Teams.MatchesPlayed, new SKPoint(537, 671), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Teams.Wins, out textBounds, valuePaint);
-            canvas.DrawText(stats.Teams.Wins, 698, 671 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Teams.Wins, new SKPoint(698, 671), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Teams.WinRatio, out textBounds, valuePaint);
-            canvas.DrawText(stats.Teams.WinRatio, 837, 671 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Teams.WinRatio, new SKPoint(837, 671), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Teams.Kills, out textBounds, valuePaint);
-            canvas.DrawText(stats.Teams.Kills, 954, 671 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Teams.Kills, new SKPoint(954, 671), valuePaintFont, valuePaint);
 
-            valuePaintFont.MeasureText(stats.Teams.KD, out textBounds, valuePaint);
-            canvas.DrawText(stats.Teams.KD, 1115, 671 - textBounds.Top, SKTextAlign.Left, valuePaintFont, valuePaint);
+            canvas.DrawAlignedText(stats.Teams.KD, new SKPoint(1115, 671), valuePaintFont, valuePaint);
         }
 
         return bitmap;

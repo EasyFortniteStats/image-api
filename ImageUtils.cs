@@ -22,14 +22,14 @@ public class ImageUtils
         var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf"); // don't dispose
 
         using var discordTagTextPaint = new SKPaint();
+        using var discordTagTextPaintFont = new SKFont();
         discordTagTextPaint.IsAntialias = true;
         discordTagTextPaint.Color = SKColors.White;
-
-        using var discordTagTextPaintFont = new SKFont();
         discordTagTextPaintFont.Typeface = segoeFont;
         discordTagTextPaintFont.Size = 25 * resizeFactor;
 
-        discordTagTextPaintFont.MeasureText(username, out var discordTagTextBounds, discordTagTextPaint);
+        SKRect discordTagTextBounds;
+        discordTagTextPaintFont.MeasureText(username, out discordTagTextBounds, discordTagTextPaint);
 
         var imageInfo = new SKImageInfo(
             (int)Math.Min(discordTagTextBounds.Width + (10 + 2 * 15 + 50) * resizeFactor, 459 * resizeFactor),
@@ -52,8 +52,7 @@ public class ImageUtils
 
         using var drawdiscordLogoPaint = new SKPaint();
         drawdiscordLogoPaint.IsAntialias = true;
-        canvas.DrawBitmap(discordLogoBitmap, SKRect.Create(logoX, logoY, logoResizeWidth, logoResizeHeight),
-            new SKSamplingOptions(SKCubicResampler.Mitchell), drawdiscordLogoPaint);
+        canvas.DrawBitmap(discordLogoBitmap, SKRect.Create(logoX, logoY, logoResizeWidth, logoResizeHeight), SKSamplingOptions.Default, drawdiscordLogoPaint);
 
         while (discordTagTextBounds.Width + (10 + 2 * 15 + 50) * resizeFactor > imageInfo.Width)
         {
@@ -61,8 +60,11 @@ public class ImageUtils
             discordTagTextPaintFont.MeasureText(username, out discordTagTextBounds, discordTagTextPaint);
         }
 
-        canvas.DrawText(username, (10 + 15) * resizeFactor + logoResizeWidth,
-            (float)imageInfo.Height / 2 - discordTagTextBounds.MidY, SKTextAlign.Left, discordTagTextPaintFont, discordTagTextPaint);
+        canvas.DrawAlignedText(
+            username,
+            new SKPoint((10 + 15) * resizeFactor + logoResizeWidth, imageInfo.Height / 2f), discordTagTextPaintFont,
+            discordTagTextPaint,
+            verticalAlignment: VerticalTextAlignment.Center);
 
         return bitmap;
     }
@@ -129,8 +131,7 @@ public class ImageUtils
         if (icon is not null)
         {
             using var rotatedVbucksBitmap = RotateBitmap(icon, -20);
-            using var resizedVBucksBitmap = rotatedVbucksBitmap.Resize(new SKImageInfo(47, 47),
-                new SKSamplingOptions(SKFilterMode.Linear));
+            using var resizedVBucksBitmap = rotatedVbucksBitmap.Resize(new SKImageInfo(47, 47), new SKSamplingOptions(SKFilterMode.Linear));
 
             canvas.DrawBitmap(resizedVBucksBitmap, new SKPoint(imageInfo.Width - 45, imageInfo.Height - 35), SKSamplingOptions.Default);
         }
