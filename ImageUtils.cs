@@ -60,8 +60,11 @@ public class ImageUtils
             discordTagTextPaint.MeasureText(username, ref discordTagTextBounds);
         }
 
-        canvas.DrawText(username, (10 + 15) * resizeFactor + logoResizeWidth,
-            (float)imageInfo.Height / 2 - discordTagTextBounds.MidY, discordTagTextPaint);
+        canvas.DrawAlignedText(
+            username,
+            new SKPoint((10 + 15) * resizeFactor + logoResizeWidth, imageInfo.Height / 2f),
+            discordTagTextPaint,
+            verticalAlignment: VerticalTextAlignment.Center);
 
         return bitmap;
     }
