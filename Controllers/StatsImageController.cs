@@ -120,8 +120,6 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         titlePaint.Typeface = segoeFont;
         titlePaint.TextSize = 20;
 
-        var textBounds = new SKRect();
-
         if (type == StatsType.Competitive)
         {
             var overallBoxRect = new SKRoundRect(SKRect.Create(50, 159, 437, 415), 30);
@@ -149,29 +147,21 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             var zeroBuildLogo = await assets.GetBitmap("Assets/Images/Stats/ZeroBuildLogo.png"); // don't dispose
             canvas.DrawBitmap(zeroBuildLogo, new SKPoint(317, 277));
 
-            competitiveBoxTitlePaint.MeasureText("OVERALL", ref textBounds);
-            canvas.DrawText("OVERALL", 211, 305 - textBounds.Top, competitiveBoxTitlePaint);
+            canvas.DrawAlignedText("OVERALL", new SKPoint(211, 305), competitiveBoxTitlePaint);
 
-            titlePaint.MeasureText("Earnings", ref textBounds);
-            canvas.DrawText("Earnings", 70, 338 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Earnings", new SKPoint(70, 338), titlePaint);
 
-            titlePaint.MeasureText("Power Ranking", ref textBounds);
-            canvas.DrawText("Power Ranking", 250, 338 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Power Ranking", new SKPoint(250, 338), titlePaint);
 
-            titlePaint.MeasureText("Games", ref textBounds);
-            canvas.DrawText("Games", 70, 414 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Games", new SKPoint(70, 414), titlePaint);
 
-            titlePaint.MeasureText("Wins", ref textBounds);
-            canvas.DrawText("Wins", 231, 414 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Wins", new SKPoint(231, 414), titlePaint);
 
-            titlePaint.MeasureText("Win%", ref textBounds);
-            canvas.DrawText("Win%", 370, 414 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Win%", new SKPoint(370, 414), titlePaint);
 
-            titlePaint.MeasureText("Kills", ref textBounds);
-            canvas.DrawText("Kills", 70, 491 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Kills", new SKPoint(70, 491), titlePaint);
 
-            titlePaint.MeasureText("K/D", ref textBounds);
-            canvas.DrawText("K/D", 231, 491 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("K/D", new SKPoint(231, 491), titlePaint);
         }
         else
         {
@@ -179,38 +169,27 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             DrawBlurredRoundRect(bitmap, overallBoxRect);
             canvas.DrawRoundRect(overallBoxRect, boxPaint);
 
-            boxTitlePaint.MeasureText("OVERALL", ref textBounds);
-            canvas.DrawText("OVERALL", 60, 134 - textBounds.Top, boxTitlePaint);
+            canvas.DrawAlignedText("OVERALL", new SKPoint(60, 134), boxTitlePaint);
 
-            titlePaint.MeasureText("Games", ref textBounds);
-            canvas.DrawText("Games", 70, 184 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Games", new SKPoint(70, 184), titlePaint);
 
-            titlePaint.MeasureText("Wins", ref textBounds);
-            canvas.DrawText("Wins", 231, 184 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Wins", new SKPoint(231, 184), titlePaint);
 
-            titlePaint.MeasureText("Win%", ref textBounds);
-            canvas.DrawText("Win%", 370, 184 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Win%", new SKPoint(370, 184), titlePaint);
 
-            titlePaint.MeasureText("Kills", ref textBounds);
-            canvas.DrawText("Kills", 70, 261 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Kills", new SKPoint(70, 261), titlePaint);
 
-            titlePaint.MeasureText("K/D", ref textBounds);
-            canvas.DrawText("K/D", 231, 261 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("K/D", new SKPoint(231, 261), titlePaint);
 
-            titlePaint.MeasureText("Playtime since Season 7", ref textBounds);
-            canvas.DrawText("Playtime since Season 7", 70, 338 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Playtime since Season 7", new SKPoint(70, 338), titlePaint);
 
-            titlePaint.MeasureText("days", ref textBounds);
-            canvas.DrawText("days", 70, 397 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("days", new SKPoint(70, 397), titlePaint);
 
-            titlePaint.MeasureText("hours", ref textBounds);
-            canvas.DrawText("hours", 147, 397 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("hours", new SKPoint(147, 397), titlePaint);
 
-            titlePaint.MeasureText("minutes", ref textBounds);
-            canvas.DrawText("minutes", 231, 397 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("minutes", new SKPoint(231, 397), titlePaint);
 
-            titlePaint.MeasureText("BattlePass Level", ref textBounds);
-            canvas.DrawText("BattlePass Level", 70, 442 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("BattlePass Level", new SKPoint(70, 442), titlePaint);
 
             using var battlePassBarBackgroundPaint = new SKPaint();
             battlePassBarBackgroundPaint.IsAntialias = true;
@@ -223,116 +202,88 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         DrawBlurredRoundRect(bitmap, soloBoxRect);
         canvas.DrawRoundRect(soloBoxRect, boxPaint);
 
-        boxTitlePaint.MeasureText("SOLO", ref textBounds);
-        canvas.DrawText("SOLO", 527, 134 - textBounds.Top, boxTitlePaint);
+        canvas.DrawAlignedText("SOLO", new SKPoint(527, 134), boxTitlePaint);
 
         var soloIcon = await assets.GetBitmap("Assets/Images/Stats/PlaylistIcons/solo.png"); // don't dispose
         canvas.DrawBitmap(soloIcon, new SKPoint(648, 134));
 
-        titlePaint.MeasureText("Games", ref textBounds);
-        canvas.DrawText("Games", 537, 184 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Games", new SKPoint(537, 184), titlePaint);
 
-        titlePaint.MeasureText("Wins", ref textBounds);
-        canvas.DrawText("Wins", 698, 184 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Wins", new SKPoint(698, 184), titlePaint);
 
-        titlePaint.MeasureText("Win%", ref textBounds);
-        canvas.DrawText("Win%", 837, 184 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Win%", new SKPoint(837, 184), titlePaint);
 
-        titlePaint.MeasureText("Kills", ref textBounds);
-        canvas.DrawText("Kills", 537, 261 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Kills", new SKPoint(537, 261), titlePaint);
 
-        titlePaint.MeasureText("K/D", ref textBounds);
-        canvas.DrawText("K/D", 698, 261 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("K/D", new SKPoint(698, 261), titlePaint);
 
-        titlePaint.MeasureText("Top 25", ref textBounds);
-        canvas.DrawText("Top 25", 837, 261 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Top 25", new SKPoint(837, 261), titlePaint);
 
         // Duos
         var duosBoxRect = new SKRoundRect(SKRect.Create(996, 159, 459, 185), 30);
         DrawBlurredRoundRect(bitmap, duosBoxRect);
         canvas.DrawRoundRect(duosBoxRect, boxPaint);
 
-        boxTitlePaint.MeasureText("DUOS", ref textBounds);
-        canvas.DrawText("DUOS", 1006, 134 - textBounds.Top, boxTitlePaint);
+        canvas.DrawAlignedText("DUOS", new SKPoint(1006, 134), boxTitlePaint);
 
         var duosIcon = await assets.GetBitmap("Assets/Images/Stats/PlaylistIcons/duos.png"); // don't dispose
         canvas.DrawBitmap(duosIcon, new SKPoint(1133, 134));
 
-        titlePaint.MeasureText("Games", ref textBounds);
-        canvas.DrawText("Games", 1016, 184 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Games", new SKPoint(1016, 184), titlePaint);
 
-        titlePaint.MeasureText("Wins", ref textBounds);
-        canvas.DrawText("Wins", 1177, 184 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Wins", new SKPoint(1177, 184), titlePaint);
 
-        titlePaint.MeasureText("Win%", ref textBounds);
-        canvas.DrawText("Win%", 1316, 184 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Win%", new SKPoint(1316, 184), titlePaint);
 
-        titlePaint.MeasureText("Kills", ref textBounds);
-        canvas.DrawText("Kills", 1016, 261 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Kills", new SKPoint(1016, 261), titlePaint);
 
-        titlePaint.MeasureText("K/D", ref textBounds);
-        canvas.DrawText("K/D", 1177, 261 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("K/D", new SKPoint(1177, 261), titlePaint);
 
-        titlePaint.MeasureText("Top 12", ref textBounds);
-        canvas.DrawText("Top 12", 1316, 261 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Top 12", new SKPoint(1316, 261), titlePaint);
 
         // Trios
         var triosBoxRect = new SKRoundRect(SKRect.Create(517, 389, 459, 185), 30);
         DrawBlurredRoundRect(bitmap, triosBoxRect);
         canvas.DrawRoundRect(triosBoxRect, boxPaint);
 
-        boxTitlePaint.MeasureText("TRIOS", ref textBounds);
-        canvas.DrawText("TRIOS", 527, 364 - textBounds.Top, boxTitlePaint);
+        canvas.DrawAlignedText("TRIOS", new SKPoint(527, 364), boxTitlePaint);
 
         var triosIcon = await assets.GetBitmap(@"Assets/Images/Stats/PlaylistIcons/trios.png"); // don't dispose
         canvas.DrawBitmap(triosIcon, new SKPoint(663, 364));
 
-        titlePaint.MeasureText("Games", ref textBounds);
-        canvas.DrawText("Games", 537, 414 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Games", new SKPoint(537, 414), titlePaint);
 
-        titlePaint.MeasureText("Wins", ref textBounds);
-        canvas.DrawText("Wins", 698, 414 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Wins", new SKPoint(698, 414), titlePaint);
 
-        titlePaint.MeasureText("Win%", ref textBounds);
-        canvas.DrawText("Win%", 837, 414 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Win%", new SKPoint(837, 414), titlePaint);
 
-        titlePaint.MeasureText("Kills", ref textBounds);
-        canvas.DrawText("Kills", 537, 491 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Kills", new SKPoint(537, 491), titlePaint);
 
-        titlePaint.MeasureText("K/D", ref textBounds);
-        canvas.DrawText("K/D", 698, 491 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("K/D", new SKPoint(698, 491), titlePaint);
 
-        titlePaint.MeasureText("Top 6", ref textBounds);
-        canvas.DrawText("Top 6", 837, 491 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Top 6", new SKPoint(837, 491), titlePaint);
 
         // Squads
         var squadsBoxRect = new SKRoundRect(SKRect.Create(996, 389, 459, 185), 30);
         DrawBlurredRoundRect(bitmap, squadsBoxRect);
         canvas.DrawRoundRect(squadsBoxRect, boxPaint);
 
-        boxTitlePaint.MeasureText("SQUADS", ref textBounds);
-        canvas.DrawText("SQUADS", 1006, 364 - textBounds.Top, boxTitlePaint);
+        canvas.DrawAlignedText("SQUADS", new SKPoint(1006, 364), boxTitlePaint);
 
         var squadsIcon = await assets.GetBitmap(@"Assets/Images/Stats/PlaylistIcons/squads.png"); // don't dispose
         canvas.DrawBitmap(squadsIcon, new SKPoint(1191, 364));
 
-        titlePaint.MeasureText("Games", ref textBounds);
-        canvas.DrawText("Games", 1016, 414 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Games", new SKPoint(1016, 414), titlePaint);
 
-        titlePaint.MeasureText("Wins", ref textBounds);
-        canvas.DrawText("Wins", 1177, 414 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Wins", new SKPoint(1177, 414), titlePaint);
 
-        titlePaint.MeasureText("Win%", ref textBounds);
-        canvas.DrawText("Win%", 1316, 414 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Win%", new SKPoint(1316, 414), titlePaint);
 
-        titlePaint.MeasureText("Kills", ref textBounds);
-        canvas.DrawText("Kills", 1016, 491 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Kills", new SKPoint(1016, 491), titlePaint);
 
-        titlePaint.MeasureText("K/D", ref textBounds);
-        canvas.DrawText("K/D", 1177, 491 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("K/D", new SKPoint(1177, 491), titlePaint);
 
-        titlePaint.MeasureText("Top 6", ref textBounds);
-        canvas.DrawText("Top 6", 1316, 491 - textBounds.Top, titlePaint);
+        canvas.DrawAlignedText("Top 6", new SKPoint(1316, 491), titlePaint);
 
         if (type == StatsType.Normal)
         {
@@ -341,26 +292,20 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             DrawBlurredRoundRect(bitmap, teamsBoxRect);
             canvas.DrawRoundRect(teamsBoxRect, boxPaint);
 
-            boxTitlePaint.MeasureText("TEAMS", ref textBounds);
-            canvas.DrawText("TEAMS", 527, 594 - textBounds.Top, boxTitlePaint);
+            canvas.DrawAlignedText("TEAMS", new SKPoint(527, 594), boxTitlePaint);
 
             var teamsIcon = await assets.GetBitmap("Assets/Images/Stats/PlaylistIcons/teams.png"); // don't dispose
             canvas.DrawBitmap(teamsIcon, new SKPoint(683, 594));
 
-            titlePaint.MeasureText("Games", ref textBounds);
-            canvas.DrawText("Games", 537, 644 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Games", new SKPoint(537, 644), titlePaint);
 
-            titlePaint.MeasureText("Wins", ref textBounds);
-            canvas.DrawText("Wins", 698, 644 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Wins", new SKPoint(698, 644), titlePaint);
 
-            titlePaint.MeasureText("Win%", ref textBounds);
-            canvas.DrawText("Win%", 837, 644 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Win%", new SKPoint(837, 644), titlePaint);
 
-            titlePaint.MeasureText("Kills", ref textBounds);
-            canvas.DrawText("Kills", 954, 644 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("Kills", new SKPoint(954, 644), titlePaint);
 
-            titlePaint.MeasureText("K/D", ref textBounds);
-            canvas.DrawText("K/D", 1115, 644 - textBounds.Top, titlePaint);
+            canvas.DrawAlignedText("K/D", new SKPoint(1115, 644), titlePaint);
         }
 
         return bitmap;
@@ -419,19 +364,17 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
         rankingPaint.TextSize = 20;
         rankingPaint.FilterQuality = SKFilterQuality.Medium;
 
-        var textBounds = new SKRect();
-
         var inputIcon =
             await assets.GetBitmap($"Assets/Images/Stats/InputTypes/{stats.InputType}.png"); // don't dispose
         canvas.DrawBitmap(inputIcon, 50, 50);
 
-        namePaint.MeasureText(stats.PlayerName, ref textBounds);
-        canvas.DrawText(stats.PlayerName, 159, 58 - textBounds.Top, namePaint);
+        var playerNameWidth = namePaint.MeasureText(stats.PlayerName);
+        canvas.DrawAlignedText(stats.PlayerName, new SKPoint(159, 58), namePaint);
 
         if (stats.IsVerified)
         {
             var verifiedIcon = await assets.GetBitmap("Assets/Images/Stats/Verified.png"); // don't dispose
-            canvas.DrawBitmap(verifiedIcon, 159 + textBounds.Width + 5, 47);
+            canvas.DrawBitmap(verifiedIcon, 159 + playerNameWidth + 5, 47);
 
             using var discordBoxBitmap = await ImageUtils.GenerateDiscordBox(assets, stats.UserName ?? "???#0000");
             canvas.DrawBitmap(discordBoxBitmap, imageInfo.Width - 50 - discordBoxBitmap.Width, 39);
@@ -455,16 +398,18 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
                         $"Assets/Images/Stats/DivisionIcons/{divisionAssetName}.png"); // don't dispose
                 canvas.DrawBitmap(divisionIconBitmap, x - divisionIconBitmap!.Width / 2f, 109);
 
-                divisionPaint.MeasureText(rankedStatsEntry.CurrentDivisionName, ref textBounds);
-                canvas.DrawText(rankedStatsEntry.CurrentDivisionName, x - (int)(textBounds.Width / 2),
-                    206 - textBounds.Top, divisionPaint);
+                canvas.DrawAlignedText(
+                    rankedStatsEntry.CurrentDivisionName,
+                    new SKPoint(x, 206),
+                    divisionPaint,
+                    SKTextAlign.Center);
 
                 if (rankedStatsEntry.Ranking is null)
                 {
                     const int maxBarWidth = 130, barHeight = 6;
                     var progressText = $"{(int)(rankedStatsEntry.Progress * 100)}%";
-                    rankProgressPaint.MeasureText(progressText, ref textBounds);
-                    var barX = x - textBounds.Width / 2f - maxBarWidth / 2f;
+                    var progressTextWidth = rankProgressPaint.MeasureText(progressText);
+                    var barX = x - progressTextWidth / 2f - maxBarWidth / 2f;
 
                     using var barBackgroundPaint = new SKPaint();
                     barBackgroundPaint.IsAntialias = true;
@@ -489,66 +434,52 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
                         canvas.DrawRoundRect(barX, 250, rankProgressBarWidth, barHeight, 10, 10, battlePassBarPaint);
                     }
 
-                    canvas.DrawText(progressText, barX + maxBarWidth + 7, 247 - textBounds.Top, rankProgressPaint);
+                    canvas.DrawAlignedText(progressText, new SKPoint(barX + maxBarWidth + 7, 247), rankProgressPaint);
                 }
                 else
                 {
-                    rankingPaint.MeasureText(rankedStatsEntry.Ranking, ref textBounds);
-                    canvas.DrawText(rankedStatsEntry.Ranking, x - (int)(textBounds.Width / 2), 245 - textBounds.Top,
-                        rankingPaint);
+                    canvas.DrawAlignedText(
+                        rankedStatsEntry.Ranking,
+                        new SKPoint(x, 245),
+                        rankingPaint,
+                        SKTextAlign.Center);
                 }
             }
 
-            valuePaint.MeasureText(stats.Competitive.Earnings, ref textBounds);
-            canvas.DrawText(stats.Competitive.Earnings, 70, 365 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Competitive.Earnings, new SKPoint(70, 365), valuePaint);
 
-            valuePaint.MeasureText(stats.Competitive.PowerRanking, ref textBounds);
-            canvas.DrawText(stats.Competitive.PowerRanking, 250, 365 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Competitive.PowerRanking, new SKPoint(250, 365), valuePaint);
 
-            valuePaint.MeasureText(stats.Overall.MatchesPlayed, ref textBounds);
-            canvas.DrawText(stats.Overall.MatchesPlayed, 70, 441 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.MatchesPlayed, new SKPoint(70, 441), valuePaint);
 
-            valuePaint.MeasureText(stats.Overall.Wins, ref textBounds);
-            canvas.DrawText(stats.Overall.Wins, 231, 441 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.Wins, new SKPoint(231, 441), valuePaint);
 
-            valuePaint.MeasureText(stats.Overall.WinRatio, ref textBounds);
-            canvas.DrawText(stats.Overall.WinRatio, 370, 441 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.WinRatio, new SKPoint(370, 441), valuePaint);
 
-            valuePaint.MeasureText(stats.Overall.Kills, ref textBounds);
-            canvas.DrawText(stats.Overall.Kills, 70, 518 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.Kills, new SKPoint(70, 518), valuePaint);
 
-            valuePaint.MeasureText(stats.Overall.KD, ref textBounds);
-            canvas.DrawText(stats.Overall.KD, 231, 518 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.KD, new SKPoint(231, 518), valuePaint);
         }
         else
         {
-            valuePaint.MeasureText(stats.Overall.MatchesPlayed, ref textBounds);
-            canvas.DrawText(stats.Overall.MatchesPlayed, 70, 211 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.MatchesPlayed, new SKPoint(70, 211), valuePaint);
 
-            valuePaint.MeasureText(stats.Overall.Wins, ref textBounds);
-            canvas.DrawText(stats.Overall.Wins, 231, 211 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.Wins, new SKPoint(231, 211), valuePaint);
 
-            valuePaint.MeasureText(stats.Overall.WinRatio, ref textBounds);
-            canvas.DrawText(stats.Overall.WinRatio, 370, 211 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.WinRatio, new SKPoint(370, 211), valuePaint);
 
-            valuePaint.MeasureText(stats.Overall.Kills, ref textBounds);
-            canvas.DrawText(stats.Overall.Kills, 70, 288 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.Kills, new SKPoint(70, 288), valuePaint);
 
-            valuePaint.MeasureText(stats.Overall.KD, ref textBounds);
-            canvas.DrawText(stats.Overall.KD, 231, 288 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Overall.KD, new SKPoint(231, 288), valuePaint);
 
-            valuePaint.MeasureText(stats.Playtime.Days, ref textBounds);
-            canvas.DrawText(stats.Playtime.Days, 70, 369 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Playtime.Days, new SKPoint(70, 369), valuePaint);
 
-            valuePaint.MeasureText(stats.Playtime.Hours, ref textBounds);
-            canvas.DrawText(stats.Playtime.Hours, 147, 369 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Playtime.Hours, new SKPoint(147, 369), valuePaint);
 
-            valuePaint.MeasureText(stats.Playtime.Minutes, ref textBounds);
-            canvas.DrawText(stats.Playtime.Minutes, 213, 369 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Playtime.Minutes, new SKPoint(213, 369), valuePaint);
 
             var battlePassLevel = ((int)stats.BattlePassLevel).ToString();
-            valuePaint.MeasureText(battlePassLevel, ref textBounds);
-            canvas.DrawText(battlePassLevel, 70, 479 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(battlePassLevel, new SKPoint(70, 479), valuePaint);
 
             const int maxBarWidth = 309, barHeight = 20;
 
@@ -572,97 +503,68 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
             }
         }
 
-        valuePaint.MeasureText(stats.Solo.MatchesPlayed, ref textBounds);
-        canvas.DrawText(stats.Solo.MatchesPlayed, 537, 211 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.MatchesPlayed, new SKPoint(537, 211), valuePaint);
 
-        valuePaint.MeasureText(stats.Solo.Wins, ref textBounds);
-        canvas.DrawText(stats.Solo.Wins, 698, 211 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.Wins, new SKPoint(698, 211), valuePaint);
 
-        valuePaint.MeasureText(stats.Solo.WinRatio, ref textBounds);
-        canvas.DrawText(stats.Solo.WinRatio, 837, 211 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.WinRatio, new SKPoint(837, 211), valuePaint);
 
-        valuePaint.MeasureText(stats.Solo.Kills, ref textBounds);
-        canvas.DrawText(stats.Solo.Kills, 537, 288 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.Kills, new SKPoint(537, 288), valuePaint);
 
-        valuePaint.MeasureText(stats.Solo.KD, ref textBounds);
-        canvas.DrawText(stats.Solo.KD, 698, 288 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.KD, new SKPoint(698, 288), valuePaint);
 
-        valuePaint.MeasureText(stats.Solo.Top25, ref textBounds);
-        canvas.DrawText(stats.Solo.Top25, 837, 288 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Solo.Top25, new SKPoint(837, 288), valuePaint);
 
 
-        valuePaint.MeasureText(stats.Duos.MatchesPlayed, ref textBounds);
-        canvas.DrawText(stats.Duos.MatchesPlayed, 1016, 211 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.MatchesPlayed, new SKPoint(1016, 211), valuePaint);
 
-        valuePaint.MeasureText(stats.Duos.Wins, ref textBounds);
-        canvas.DrawText(stats.Duos.Wins, 1177, 211 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.Wins, new SKPoint(1177, 211), valuePaint);
 
-        valuePaint.MeasureText(stats.Duos.WinRatio, ref textBounds);
-        canvas.DrawText(stats.Duos.WinRatio, 1316, 211 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.WinRatio, new SKPoint(1316, 211), valuePaint);
 
-        valuePaint.MeasureText(stats.Duos.Kills, ref textBounds);
-        canvas.DrawText(stats.Duos.Kills, 1016, 288 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.Kills, new SKPoint(1016, 288), valuePaint);
 
-        valuePaint.MeasureText(stats.Duos.KD, ref textBounds);
-        canvas.DrawText(stats.Duos.KD, 1177, 288 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.KD, new SKPoint(1177, 288), valuePaint);
 
-        valuePaint.MeasureText(stats.Duos.Top12, ref textBounds);
-        canvas.DrawText(stats.Duos.Top12, 1316, 288 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Duos.Top12, new SKPoint(1316, 288), valuePaint);
 
 
-        valuePaint.MeasureText(stats.Trios.MatchesPlayed, ref textBounds);
-        canvas.DrawText(stats.Trios.MatchesPlayed, 537, 441 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.MatchesPlayed, new SKPoint(537, 441), valuePaint);
 
-        valuePaint.MeasureText(stats.Trios.Wins, ref textBounds);
-        canvas.DrawText(stats.Trios.Wins, 698, 441 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.Wins, new SKPoint(698, 441), valuePaint);
 
-        valuePaint.MeasureText(stats.Trios.WinRatio, ref textBounds);
-        canvas.DrawText(stats.Trios.WinRatio, 837, 441 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.WinRatio, new SKPoint(837, 441), valuePaint);
 
-        valuePaint.MeasureText(stats.Trios.Kills, ref textBounds);
-        canvas.DrawText(stats.Trios.Kills, 537, 518 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.Kills, new SKPoint(537, 518), valuePaint);
 
-        valuePaint.MeasureText(stats.Trios.KD, ref textBounds);
-        canvas.DrawText(stats.Trios.KD, 698, 518 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.KD, new SKPoint(698, 518), valuePaint);
 
-        valuePaint.MeasureText(stats.Trios.Top6, ref textBounds);
-        canvas.DrawText(stats.Trios.Top6, 837, 518 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Trios.Top6, new SKPoint(837, 518), valuePaint);
 
 
-        valuePaint.MeasureText(stats.Squads.MatchesPlayed, ref textBounds);
-        canvas.DrawText(stats.Squads.MatchesPlayed, 1016, 441 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.MatchesPlayed, new SKPoint(1016, 441), valuePaint);
 
-        valuePaint.MeasureText(stats.Squads.Wins, ref textBounds);
-        canvas.DrawText(stats.Squads.Wins, 1177, 441 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.Wins, new SKPoint(1177, 441), valuePaint);
 
-        valuePaint.MeasureText(stats.Squads.WinRatio, ref textBounds);
-        canvas.DrawText(stats.Squads.WinRatio, 1316, 441 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.WinRatio, new SKPoint(1316, 441), valuePaint);
 
-        valuePaint.MeasureText(stats.Squads.Kills, ref textBounds);
-        canvas.DrawText(stats.Squads.Kills, 1016, 518 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.Kills, new SKPoint(1016, 518), valuePaint);
 
-        valuePaint.MeasureText(stats.Squads.KD, ref textBounds);
-        canvas.DrawText(stats.Squads.KD, 1177, 518 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.KD, new SKPoint(1177, 518), valuePaint);
 
-        valuePaint.MeasureText(stats.Squads.Top6, ref textBounds);
-        canvas.DrawText(stats.Squads.Top6, 1316, 518 - textBounds.Top, valuePaint);
+        canvas.DrawAlignedText(stats.Squads.Top6, new SKPoint(1316, 518), valuePaint);
 
         if (type == StatsType.Normal && stats.Teams is not null)
         {
-            valuePaint.MeasureText(stats.Teams.MatchesPlayed, ref textBounds);
-            canvas.DrawText(stats.Teams.MatchesPlayed, 537, 671 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Teams.MatchesPlayed, new SKPoint(537, 671), valuePaint);
 
-            valuePaint.MeasureText(stats.Teams.Wins, ref textBounds);
-            canvas.DrawText(stats.Teams.Wins, 698, 671 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Teams.Wins, new SKPoint(698, 671), valuePaint);
 
-            valuePaint.MeasureText(stats.Teams.WinRatio, ref textBounds);
-            canvas.DrawText(stats.Teams.WinRatio, 837, 671 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Teams.WinRatio, new SKPoint(837, 671), valuePaint);
 
-            valuePaint.MeasureText(stats.Teams.Kills, ref textBounds);
-            canvas.DrawText(stats.Teams.Kills, 954, 671 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Teams.Kills, new SKPoint(954, 671), valuePaint);
 
-            valuePaint.MeasureText(stats.Teams.KD, ref textBounds);
-            canvas.DrawText(stats.Teams.KD, 1115, 671 - textBounds.Top, valuePaint);
+            canvas.DrawAlignedText(stats.Teams.KD, new SKPoint(1115, 671), valuePaint);
         }
 
         return bitmap;

@@ -47,16 +47,17 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         }
 
         var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf");
-        var textBounds = new SKRect();
-
         using var textPaint = new SKPaint();
         textPaint.IsAntialias = true;
         textPaint.Color = SKColors.White;
         textPaint.TextSize = 20;
         textPaint.Typeface = segoeFont;
 
-        textPaint.MeasureText(progressBar.Text, ref textBounds);
-        canvas.DrawText(progressBar.Text, 500 + 5, bitmap.Height / 2f - textBounds.MidY, textPaint);
+        canvas.DrawAlignedText(
+            progressBar.Text,
+            new SKPoint(500 + 5, bitmap.Height / 2f),
+            textPaint,
+            verticalAlignment: VerticalTextAlignment.Center);
 
         if (progressBar.BarText != null)
         {
@@ -66,9 +67,12 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
             barTextPaint.TextSize = 15;
             barTextPaint.Typeface = segoeFont;
 
-            barTextPaint.MeasureText(progressBar.BarText, ref textBounds);
-            canvas.DrawText(progressBar.BarText, (500 - textBounds.Width) / 2f,
-                bitmap.Height / 2f - textBounds.MidY, barTextPaint);
+            canvas.DrawAlignedText(
+                progressBar.BarText,
+                SKRect.Create(0, 0, 500, bitmap.Height),
+                barTextPaint,
+                SKTextAlign.Center,
+                VerticalTextAlignment.Center);
         }
 
         var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);

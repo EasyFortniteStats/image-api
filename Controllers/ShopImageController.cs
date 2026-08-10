@@ -285,7 +285,7 @@ public partial class ShopImageController(
         shopTitlePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-86Bold.otf");
 
         var shopTitleWidth = shopTitlePaint.MeasureText(shop.Title);
-        canvas.DrawText(shop.Title, 100, 50 - shopTitlePaint.FontMetrics.Ascent, shopTitlePaint);
+        canvas.DrawAlignedText(shop.Title, new SKPoint(100, 50), shopTitlePaint);
 
         // Drawing the date
         using var datePaint = new SKPaint();
@@ -298,8 +298,8 @@ public partial class ShopImageController(
         var datePoint = new SKPoint(
             Math.Max(HORIZONTAL_PADDING + shopTitleWidth / 2f,
                 HORIZONTAL_PADDING + datePaint.MeasureText(shop.Date) / 2),
-            313 - datePaint.FontMetrics.Ascent);
-        canvas.DrawText(shop.Date, datePoint, datePaint);
+            313);
+        canvas.DrawAlignedText(shop.Date, datePoint, datePaint, SKTextAlign.Center);
 
         foreach (var sectionLocationData in shopSectionLocationData)
         {
@@ -314,9 +314,8 @@ public partial class ShopImageController(
                 sectionNamePaint.Color = SKColors.White;
                 sectionNamePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-86BoldItalic.otf");
 
-                var sectionNamePoint = new SKPoint(sectionLocationData.Name.X,
-                    sectionLocationData.Name.Y - sectionNamePaint.FontMetrics.Ascent);
-                canvas.DrawText(shopSection?.Name, sectionNamePoint, sectionNamePaint);
+                var sectionNamePoint = new SKPoint(sectionLocationData.Name.X, sectionLocationData.Name.Y);
+                canvas.DrawAlignedText(shopSection.Name, sectionNamePoint, sectionNamePaint);
             }
 
             foreach (var entryLocationData in sectionLocationData.Entries)
@@ -331,18 +330,19 @@ public partial class ShopImageController(
                 entryNamePaint.Color = SKColors.White;
                 entryNamePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf");
 
-                var entryNameTextBounds = new SKRect();
                 var nameLines = SplitNameText(shopEntry.Name, entryLocationData.Name.MaxWidth ?? 0, entryNamePaint);
                 if (nameLines.Length > 1)
                 {
-                    entryNamePaint.MeasureText(nameLines[0], ref entryNameTextBounds);
-                    canvas.DrawText(nameLines[0], entryLocationData.Name.X,
-                        entryLocationData.Name.Y + entryNameTextBounds.Height - 33, entryNamePaint);
+                    canvas.DrawAlignedText(
+                        nameLines[0],
+                        new SKPoint(entryLocationData.Name.X, entryLocationData.Name.Y - 33),
+                        entryNamePaint);
                 }
 
-                entryNamePaint.MeasureText(nameLines.Last(), ref entryNameTextBounds);
-                canvas.DrawText(nameLines.Last(), entryLocationData.Name.X,
-                    entryLocationData.Name.Y + entryNameTextBounds.Height, entryNamePaint);
+                canvas.DrawAlignedText(
+                    nameLines.Last(),
+                    new SKPoint(entryLocationData.Name.X, entryLocationData.Name.Y),
+                    entryNamePaint);
 
                 // Draw the shop entry price
                 using var pricePaint = new SKPaint();
@@ -352,9 +352,12 @@ public partial class ShopImageController(
                 pricePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf");
 
                 var priceTextWidth = pricePaint.MeasureText(shopEntry.FinalPrice);
-                var pricePoint = new SKPoint(entryLocationData.Price.X,
-                    entryLocationData.Price.Y - pricePaint.FontMetrics.Descent);
-                canvas.DrawText(shopEntry.FinalPrice, pricePoint, pricePaint);
+                var pricePoint = new SKPoint(entryLocationData.Price.X, entryLocationData.Price.Y);
+                canvas.DrawAlignedText(
+                    shopEntry.FinalPrice,
+                    pricePoint,
+                    pricePaint,
+                    verticalAlignment: VerticalTextAlignment.Bottom);
 
                 // Draw strikeout old price if item is discounted
                 if (shopEntry.FinalPrice != shopEntry.RegularPrice)
@@ -366,9 +369,14 @@ public partial class ShopImageController(
                     oldPricePaint.Typeface = await assets.GetFont("Assets/Fonts/Fortnite-75Medium.otf");
 
                     var oldPriceTextWidth = oldPricePaint.MeasureText(shopEntry.RegularPrice);
-                    var oldPricePoint = new SKPoint(entryLocationData.Price.X + priceTextWidth + 9,
-                        entryLocationData.Price.Y - pricePaint.FontMetrics.Descent);
-                    canvas.DrawText(shopEntry.RegularPrice, oldPricePoint, oldPricePaint);
+                    var oldPricePoint = new SKPoint(
+                        entryLocationData.Price.X + priceTextWidth + 9,
+                        entryLocationData.Price.Y);
+                    canvas.DrawAlignedText(
+                        shopEntry.RegularPrice,
+                        oldPricePoint,
+                        oldPricePaint,
+                        verticalAlignment: VerticalTextAlignment.Bottom);
 
                     // Draw the strikeout line
                     using var strikePaint = new SKPaint();
@@ -376,8 +384,9 @@ public partial class ShopImageController(
                     strikePaint.StrokeWidth = 2f;
                     strikePaint.Color = SKColors.White.WithAlpha((int)(.6 * 255));
 
-                    var strikeStart = new SKPoint(oldPricePoint.X - 4, oldPricePoint.Y - 9);
-                    var strikeEnd = new SKPoint(oldPricePoint.X + oldPriceTextWidth + 2, oldPricePoint.Y - 6);
+                    var oldPriceBaseline = oldPricePoint.Y - oldPricePaint.FontMetrics.Descent;
+                    var strikeStart = new SKPoint(oldPricePoint.X - 4, oldPriceBaseline - 9);
+                    var strikeEnd = new SKPoint(oldPricePoint.X + oldPriceTextWidth + 2, oldPriceBaseline - 6);
                     canvas.DrawLine(strikeStart, strikeEnd, strikePaint);
                 }
 
@@ -565,8 +574,11 @@ public partial class ShopImageController(
         }
 
 
-        // 6 + textBounds.Top
-        canvas.DrawText(text, 13, (float)imageInfo.Height / 2 - textBounds.MidY, bannerPaint);
+        canvas.DrawAlignedText(
+            text,
+            new SKPoint(13, imageInfo.Height / 2f),
+            bannerPaint,
+            verticalAlignment: VerticalTextAlignment.Center);
 
         return bitmap;
     }
