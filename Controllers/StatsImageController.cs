@@ -513,7 +513,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
         canvas.DrawAlignedText(stats.Solo.KD, new SKPoint(698, 288), valuePaint);
 
-        canvas.DrawAlignedText(stats.Solo.Top25, new SKPoint(837, 288), valuePaint);
+        canvas.DrawAlignedText(stats.Solo.Top25!, new SKPoint(837, 288), valuePaint);
 
 
         canvas.DrawAlignedText(stats.Duos.MatchesPlayed, new SKPoint(1016, 211), valuePaint);
@@ -526,7 +526,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
         canvas.DrawAlignedText(stats.Duos.KD, new SKPoint(1177, 288), valuePaint);
 
-        canvas.DrawAlignedText(stats.Duos.Top12, new SKPoint(1316, 288), valuePaint);
+        canvas.DrawAlignedText(stats.Duos.Top12!, new SKPoint(1316, 288), valuePaint);
 
 
         canvas.DrawAlignedText(stats.Trios.MatchesPlayed, new SKPoint(537, 441), valuePaint);
@@ -539,7 +539,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
         canvas.DrawAlignedText(stats.Trios.KD, new SKPoint(698, 518), valuePaint);
 
-        canvas.DrawAlignedText(stats.Trios.Top6, new SKPoint(837, 518), valuePaint);
+        canvas.DrawAlignedText(stats.Trios.Top6!, new SKPoint(837, 518), valuePaint);
 
 
         canvas.DrawAlignedText(stats.Squads.MatchesPlayed, new SKPoint(1016, 441), valuePaint);
@@ -552,7 +552,7 @@ public class StatsImageController(IMemoryCache cache, AsyncKeyedLocker<string> n
 
         canvas.DrawAlignedText(stats.Squads.KD, new SKPoint(1177, 518), valuePaint);
 
-        canvas.DrawAlignedText(stats.Squads.Top6, new SKPoint(1316, 518), valuePaint);
+        canvas.DrawAlignedText(stats.Squads.Top6!, new SKPoint(1316, 518), valuePaint);
 
         if (type == StatsType.Normal && stats.Teams is not null)
         {

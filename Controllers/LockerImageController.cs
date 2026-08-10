@@ -185,8 +185,6 @@ public class AccountImageController(
                 }
             }
 
-            SKBitmap? itemImage = null;
-
             if (itemImageBytes is not null)
             {
                 var itemImageRaw = SKBitmap.Decode(itemImageBytes);
@@ -197,6 +195,7 @@ public class AccountImageController(
                     return;
                 }
 
+                SKBitmap? itemImage;
                 if (itemImageRaw.Width != 256 || itemImageRaw.Height != 256)
                 {
                     fileExists = false;

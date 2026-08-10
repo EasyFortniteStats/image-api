@@ -59,13 +59,12 @@ public partial class ShopImageController(
         var templateHash = shop.GetTemplateHash();
         var localeTemplateHash = shop.GetLocaleTemplateHash();
 
-        SKBitmap? templateBitmap;
         SKBitmap templateBitmapCopy;
         ShopSectionLocationData[]? locationData;
         using (await namedLock.LockAsync($"shop_template_{templateHash}", cancellationToken).ConfigureAwait(false))
         {
             logger.LogDebug("Acquired shop template lock");
-            templateBitmap = cache.Get<SKBitmap?>($"shop_template_bmp_{templateHash}");
+            var templateBitmap = cache.Get<SKBitmap?>($"shop_template_bmp_{templateHash}");
             locationData = cache.Get<ShopSectionLocationData[]?>($"shop_location_data_{templateHash}");
             if (_forceNew || templateBitmap is null)
             {
@@ -115,13 +114,12 @@ public partial class ShopImageController(
         var _isNewShop = isNewShop ?? false;
         logger.LogInformation("Item Shop section image request received | Locale = {Locale} | New Shop = {SectionId}", locale, section.Id);
 
-        SKBitmap? templateBitmap;
         SKBitmap templateBitmapCopy;
         ShopSectionLocationData? shopSectionLocationData;
 
         using (await namedLock.LockAsync($"shop_section_template_{section.Id}", cancellationToken).ConfigureAwait(false))
         {
-            templateBitmap = cache.Get<SKBitmap?>($"shop_section_template_bmp_{section.Id}");
+            var templateBitmap = cache.Get<SKBitmap?>($"shop_section_template_bmp_{section.Id}");
             shopSectionLocationData = cache.Get<ShopSectionLocationData?>($"shop_section_location_data_{section.Id}");
             if (_isNewShop || templateBitmap is null)
             {
@@ -655,11 +653,10 @@ public partial class ShopImageController(
         if (shopEntry is { ImageType: "track", ImageUrl: null })
         {
             var coverRect = SKRect.Create(10, 10, 236, 236);
-            using var coverPaint = new SKPaint
-            {
-                IsAntialias = true,
-                FilterQuality = SKFilterQuality.Medium
-            };
+            
+            using var coverPaint = new SKPaint();
+            coverPaint.IsAntialias = true;
+            coverPaint.FilterQuality = SKFilterQuality.Medium;
             canvas.Save();
             canvas.ClipRoundRect(new SKRoundRect(coverRect, 10), antialias: true);
             canvas.DrawBitmap(shopEntry.Image, coverRect, coverPaint);
@@ -681,7 +678,8 @@ public partial class ShopImageController(
                 resizeHeight = imageInfo.Height;
             }
 
-            using var imagePaint = new SKPaint { FilterQuality = SKFilterQuality.Medium };
+            using var imagePaint = new SKPaint();
+            imagePaint.FilterQuality = SKFilterQuality.Medium;
 
             // Car bundles get centered in the middle of the card vertically
             if (shopEntry.ImageType == "car-bundle")
