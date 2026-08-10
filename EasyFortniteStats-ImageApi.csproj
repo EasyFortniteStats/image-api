@@ -11,8 +11,8 @@
 
     <ItemGroup>
         <PackageReference Include="AsyncKeyedLock" Version="8.0.2" />
-        <PackageReference Include="SkiaSharp" Version="[2.88.9,3.0)" />
-        <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="[2.88.9,3.0)" />
+        <PackageReference Include="SkiaSharp" Version="4.150.1" />
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.150.1" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     </ItemGroup>
     

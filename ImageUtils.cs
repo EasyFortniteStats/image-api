@@ -24,11 +24,12 @@ public class ImageUtils
         using var discordTagTextPaint = new SKPaint();
         discordTagTextPaint.IsAntialias = true;
         discordTagTextPaint.Color = SKColors.White;
-        discordTagTextPaint.Typeface = segoeFont;
-        discordTagTextPaint.TextSize = 25 * resizeFactor;
 
-        var discordTagTextBounds = new SKRect();
-        discordTagTextPaint.MeasureText(username, ref discordTagTextBounds);
+        using var discordTagTextPaintFont = new SKFont();
+        discordTagTextPaintFont.Typeface = segoeFont;
+        discordTagTextPaintFont.Size = 25 * resizeFactor;
+
+        discordTagTextPaintFont.MeasureText(username, out var discordTagTextBounds, discordTagTextPaint);
 
         var imageInfo = new SKImageInfo(
             (int)Math.Min(discordTagTextBounds.Width + (10 + 2 * 15 + 50) * resizeFactor, 459 * resizeFactor),
@@ -51,17 +52,17 @@ public class ImageUtils
 
         using var drawdiscordLogoPaint = new SKPaint();
         drawdiscordLogoPaint.IsAntialias = true;
-        drawdiscordLogoPaint.FilterQuality = SKFilterQuality.High;
-        canvas.DrawBitmap(discordLogoBitmap, SKRect.Create(logoX, logoY, logoResizeWidth, logoResizeHeight), drawdiscordLogoPaint);
+        canvas.DrawBitmap(discordLogoBitmap, SKRect.Create(logoX, logoY, logoResizeWidth, logoResizeHeight),
+            new SKSamplingOptions(SKCubicResampler.Mitchell), drawdiscordLogoPaint);
 
         while (discordTagTextBounds.Width + (10 + 2 * 15 + 50) * resizeFactor > imageInfo.Width)
         {
-            discordTagTextPaint.TextSize--;
-            discordTagTextPaint.MeasureText(username, ref discordTagTextBounds);
+            discordTagTextPaintFont.Size--;
+            discordTagTextPaintFont.MeasureText(username, out discordTagTextBounds, discordTagTextPaint);
         }
 
         canvas.DrawText(username, (10 + 15) * resizeFactor + logoResizeWidth,
-            (float)imageInfo.Height / 2 - discordTagTextBounds.MidY, discordTagTextPaint);
+            (float)imageInfo.Height / 2 - discordTagTextBounds.MidY, SKTextAlign.Left, discordTagTextPaintFont, discordTagTextPaint);
 
         return bitmap;
     }
@@ -81,7 +82,7 @@ public class ImageUtils
         rotatedCanvas.Translate(rotatedWidth / 2f, rotatedHeight / 2f);
         rotatedCanvas.RotateDegrees(-angle);
         rotatedCanvas.Translate(-originalWidth / 2f, -originalHeight / 2f);
-        rotatedCanvas.DrawBitmap(bitmap, SKPoint.Empty);
+        rotatedCanvas.DrawBitmap(bitmap, SKPoint.Empty, SKSamplingOptions.Default);
 
         return rotatedBitmap;
     }
@@ -97,12 +98,13 @@ public class ImageUtils
         paint.Color = rarityColor;
         paint.Style = SKPaintStyle.Fill;
 
-        using var path = new SKPath();
-        path.MoveTo(0, imageInfo.Height - 5);
-        path.LineTo(imageInfo.Width, 0);
-        path.LineTo(imageInfo.Width, imageInfo.Height - 6);
-        path.LineTo(0, imageInfo.Height);
-        path.Close();
+        using var pathBuilder = new SKPathBuilder();
+        pathBuilder.MoveTo(0, imageInfo.Height - 5);
+        pathBuilder.LineTo(imageInfo.Width, 0);
+        pathBuilder.LineTo(imageInfo.Width, imageInfo.Height - 6);
+        pathBuilder.LineTo(0, imageInfo.Height);
+        pathBuilder.Close();
+        using var path = pathBuilder.Detach();
 
         canvas.DrawPath(path, paint);
 
@@ -127,9 +129,10 @@ public class ImageUtils
         if (icon is not null)
         {
             using var rotatedVbucksBitmap = RotateBitmap(icon, -20);
-            using var resizedVBucksBitmap = rotatedVbucksBitmap.Resize(new SKImageInfo(47, 47), SKFilterQuality.Medium);
+            using var resizedVBucksBitmap = rotatedVbucksBitmap.Resize(new SKImageInfo(47, 47),
+                new SKSamplingOptions(SKFilterMode.Linear));
 
-            canvas.DrawBitmap(resizedVBucksBitmap, new SKPoint(imageInfo.Width - 45, imageInfo.Height - 35));
+            canvas.DrawBitmap(resizedVBucksBitmap, new SKPoint(imageInfo.Width - 45, imageInfo.Height - 35), SKSamplingOptions.Default);
         }
 
         using (var paint = new SKPaint())
@@ -138,12 +141,13 @@ public class ImageUtils
             paint.Color = new SKColor(30, 30, 30);
             paint.Style = SKPaintStyle.Fill;
 
-            using var path = new SKPath();
-            path.MoveTo(0, imageInfo.Height - 29);
-            path.LineTo(imageInfo.Width, imageInfo.Height - 29);
-            path.LineTo(imageInfo.Width, imageInfo.Height - 25);
-            path.LineTo(0, imageInfo.Height - 24);
-            path.Close();
+            using var pathBuilder = new SKPathBuilder();
+            pathBuilder.MoveTo(0, imageInfo.Height - 29);
+            pathBuilder.LineTo(imageInfo.Width, imageInfo.Height - 29);
+            pathBuilder.LineTo(imageInfo.Width, imageInfo.Height - 25);
+            pathBuilder.LineTo(0, imageInfo.Height - 24);
+            pathBuilder.Close();
+            using var path = pathBuilder.Detach();
 
             canvas.DrawPath(path, paint);
 
