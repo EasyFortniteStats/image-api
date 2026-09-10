@@ -402,3 +402,7 @@ data/
 
 # Fonts, as we don't have license to distribute them
 Assets/Fonts/
+
+
+# OS generated files
+.DS_Store
