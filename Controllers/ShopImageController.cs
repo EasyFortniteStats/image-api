@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using EasyFortniteStats_ImageApi.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -122,36 +124,87 @@ public partial class ShopImageController : ControllerBase
         [FromQuery] bool? isNewShop)
     {
         locale ??= "en";
-        var _isNewShop = isNewShop ?? false;
-        Console.WriteLine($"Item Shop section image request | Locale = {locale} | New Shop = {isNewShop}");
+        var layoutHash = GetLayoutHash(layout);
+        var templateHash = GetLayoutTemplateHash(layout);
+        var imageCacheKey = $"shop_layout_image_{layoutHash}";
+        var imageLockName = $"shop_layout_image_{layoutHash}";
+        Console.WriteLine(
+            $"Item Shop layout image request | Layout = {layout.Id} | Locale = {locale} | New Shop = {isNewShop ?? false}");
 
-        SKBitmap? templateBitmap;
-        ShopSectionLocationData[]? shopSectionLocationData;
+        var cachedImage = _cache.Get<byte[]>(imageCacheKey);
+        if (cachedImage is not null)
+            return File(cachedImage, "image/png");
 
-        await _namedLock.WaitAsync($"shop_section_template_{layout.Id}");
+        await _namedLock.WaitAsync(imageLockName);
         try
         {
-            templateBitmap = _cache.Get<SKBitmap?>($"shop_section_template_bmp_{layout.Id}");
-            shopSectionLocationData = _cache.Get<ShopSectionLocationData[]?>($"shop_section_location_data_{layout.Id}");
-            if (_isNewShop || templateBitmap is null)
+            cachedImage = _cache.Get<byte[]>(imageCacheKey);
+            if (cachedImage is not null)
+                return File(cachedImage, "image/png");
+
+            SKBitmap? templateBitmap;
+            ShopSectionLocationData[]? shopSectionLocationData;
+            var templateCacheKey = $"shop_layout_template_bmp_{templateHash}";
+            var locationCacheKey = $"shop_layout_location_data_{templateHash}";
+            var templateLockName = $"shop_layout_template_{templateHash}";
+
+            await _namedLock.WaitAsync(templateLockName);
+            try
             {
-                await PrefetchImages(layout.Sections);
-                var templateGenerationResult = await GenerateLayoutTemplate(layout);
-                templateBitmap = templateGenerationResult.Item2;
-                shopSectionLocationData = templateGenerationResult.Item1;
-                _cache.Set($"shop_section_template_bmp_{layout.Id}", templateBitmap, ShopImageCacheOptions);
-                _cache.Set($"shop_section_location_data_{layout.Id}", shopSectionLocationData,
-                    TimeSpan.FromMinutes(10));
+                templateBitmap = _cache.Get<SKBitmap?>(templateCacheKey);
+                shopSectionLocationData = _cache.Get<ShopSectionLocationData[]?>(locationCacheKey);
+                if (templateBitmap is null || shopSectionLocationData is null)
+                {
+                    await PrefetchImages(layout.Sections);
+                    var templateGenerationResult = await GenerateLayoutTemplate(layout);
+                    templateBitmap = templateGenerationResult.Item2;
+                    shopSectionLocationData = templateGenerationResult.Item1;
+                    _cache.Set(templateCacheKey, templateBitmap, ShopImageCacheOptions);
+                    _cache.Set(locationCacheKey, shopSectionLocationData, TimeSpan.FromMinutes(10));
+                }
             }
+            finally
+            {
+                _namedLock.Release(templateLockName);
+            }
+
+            using var image = await GenerateShopLayoutImage(layout, templateBitmap, shopSectionLocationData);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            var imageBytes = data.ToArray();
+            _cache.Set(imageCacheKey, imageBytes, TimeSpan.FromMinutes(10));
+            return File(imageBytes, "image/png");
         }
         finally
         {
-            _namedLock.Release($"shop_section_template_{layout.Id}");
+            _namedLock.Release(imageLockName);
         }
+    }
 
-        using var image = await GenerateShopLayoutImage(layout, templateBitmap, shopSectionLocationData!);
-        var data = image.Encode(SKEncodedImageFormat.Png, 100);
-        return File(data.AsStream(true), "image/png");
+    private static string GetLayoutHash(ShopLayout layout)
+    {
+        var json = JsonSerializer.SerializeToUtf8Bytes(layout);
+        return Convert.ToHexString(SHA256.HashData(json));
+    }
+
+    private static string GetLayoutTemplateHash(ShopLayout layout)
+    {
+        var template = layout.Sections.Select(section => new
+        {
+            section.Id,
+            HasName = section.Name is not null,
+            Entries = section.Entries.Select(entry => new
+            {
+                entry.Id,
+                entry.ImageUrl,
+                entry.FallbackImageUrl,
+                entry.ShadowColor,
+                entry.Size,
+                entry.IsSpecial,
+                HasBanner = entry.Banner is not null
+            })
+        });
+        var json = JsonSerializer.SerializeToUtf8Bytes(template);
+        return Convert.ToHexString(SHA256.HashData(json));
     }
 
     private async Task PrefetchImages(Shop shop)
@@ -164,38 +217,44 @@ public partial class ShopImageController : ControllerBase
         var entries = sections.SelectMany(x => x.Entries);
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount / 2
+            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2)
         };
         await Parallel.ForEachAsync(entries, options, async (entry, token) =>
         {
-            var cacheKey = $"shop_image_{entry.Id}";
-            await _namedLock.WaitAsync(cacheKey, token);
-            var cachedBitmap = _cache.Get<SKBitmap?>(cacheKey);
-            if (cachedBitmap is not null)
-            {
-                entry.Image = cachedBitmap;
-                _namedLock.Release(cacheKey);
-                return;
-            }
-
-            using var client = _clientFactory.CreateClient();
             var url = entry.ImageUrl ?? entry.FallbackImageUrl;
-            SKBitmap bitmap;
-
+            var urlHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(url)));
+            var cacheKey = $"shop_image_{entry.Id}_{urlHash}";
+            await _namedLock.WaitAsync(cacheKey, token);
             try
             {
-                var imageBytes = await client.GetByteArrayAsync(url, token);
-                bitmap = SKBitmap.Decode(imageBytes);
-            }
-            catch (Exception)
-            {
-                bitmap = new SKBitmap(512, 512);
-            }
+                var cachedBitmap = _cache.Get<SKBitmap?>(cacheKey);
+                if (cachedBitmap is not null)
+                {
+                    entry.Image = cachedBitmap;
+                    return;
+                }
 
-            entry.Image = bitmap;
-            // cache image for 10 minutes & make sure it gets disposed after the period
-            _cache.Set(cacheKey, bitmap, ShopImageCacheOptions);
-            _namedLock.Release(cacheKey);
+                using var client = _clientFactory.CreateClient();
+                SKBitmap bitmap;
+
+                try
+                {
+                    var imageBytes = await client.GetByteArrayAsync(url, token);
+                    bitmap = SKBitmap.Decode(imageBytes);
+                }
+                catch (Exception)
+                {
+                    bitmap = new SKBitmap(512, 512);
+                }
+
+                entry.Image = bitmap;
+                // cache image for 10 minutes & make sure it gets disposed after the period
+                _cache.Set(cacheKey, bitmap, ShopImageCacheOptions);
+            }
+            finally
+            {
+                _namedLock.Release(cacheKey);
+            }
         });
     }
 
@@ -696,8 +755,6 @@ public partial class ShopImageController : ControllerBase
         var bitmap = new SKBitmap(imageInfo);
         using var canvas = new SKCanvas(bitmap);
 
-        canvas.DrawBitmap(templateBitmap, SKPoint.Empty);
-
         using var paint = new SKPaint();
         paint.IsAntialias = true;
         paint.Shader = SKShader.CreateLinearGradient(
@@ -708,6 +765,7 @@ public partial class ShopImageController : ControllerBase
             SKShaderTileMode.Repeat);
 
         canvas.DrawRoundRect(0, 0, imageInfo.Width, imageInfo.Height, 50, 50, paint);
+        canvas.DrawBitmap(templateBitmap, SKPoint.Empty);
 
         // Drawing
         using (var layoutNamePaint = new SKPaint())
