@@ -20,18 +20,15 @@ public class AccountImageController(
 
     private static readonly IReadOnlyList<(int Count, int Quality)> QualityMapping = new List<(int, int)>
     {
-        (100, 100),
-        (150, 95),
-        (200, 90),
-        (250, 85),
-        (300, 80),
-        (325, 75),
-        (350, 70),
-        (400, 65),
-        (425, 60),
-        (450, 55),
-        (475, 50),
-        (500, 45),
+        (250, 100),
+        (300, 98),
+        (325, 98),
+        (350, 97),
+        (400, 96),
+        (425, 95),
+        (450, 94),
+        (475, 94),
+        (500, 93),
     };
 
     [HttpPost]
