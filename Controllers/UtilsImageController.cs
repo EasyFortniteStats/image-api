@@ -48,28 +48,30 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
 
         var segoeFont = await assets.GetFont("Assets/Fonts/Segoe.ttf");
         using var textPaint = new SKPaint();
+        using var textPaintFont = new SKFont();
         textPaint.IsAntialias = true;
         textPaint.Color = SKColors.White;
-        textPaint.TextSize = 20;
-        textPaint.Typeface = segoeFont;
+        textPaintFont.Size = 20;
+        textPaintFont.Typeface = segoeFont;
 
         canvas.DrawAlignedText(
             progressBar.Text,
-            new SKPoint(500 + 5, bitmap.Height / 2f),
+            new SKPoint(500 + 5, bitmap.Height / 2f), textPaintFont,
             textPaint,
             verticalAlignment: VerticalTextAlignment.Center);
 
         if (progressBar.BarText != null)
         {
             using var barTextPaint = new SKPaint();
+            using var barTextPaintFont = new SKFont();
             barTextPaint.IsAntialias = true;
             barTextPaint.Color = SKColors.White;
-            barTextPaint.TextSize = 15;
-            barTextPaint.Typeface = segoeFont;
+            barTextPaintFont.Size = 15;
+            barTextPaintFont.Typeface = segoeFont;
 
             canvas.DrawAlignedText(
                 progressBar.BarText,
-                SKRect.Create(0, 0, 500, bitmap.Height),
+                SKRect.Create(0, 0, 500, bitmap.Height), barTextPaintFont,
                 barTextPaint,
                 SKTextAlign.Center,
                 VerticalTextAlignment.Center);
@@ -103,7 +105,7 @@ public class UtilsImageController(SharedAssets assets, ILogger<UtilsImageControl
         var mx = (drop.X + worldRadius) / (worldRadius * 2f) * bitmap.Width + xOffset;
         var my = (drop.Y + worldRadius) / (worldRadius * 2f) * bitmap.Height + yOffset;
 
-        canvas.DrawBitmap(markerBitmap, mx - markerBitmap!.Width / 2f, my - markerBitmap.Height);
+        canvas.DrawBitmap(markerBitmap, mx - markerBitmap!.Width / 2f, my - markerBitmap.Height, SKSamplingOptions.Default);
 
         var data = bitmap.Encode(SKEncodedImageFormat.Jpeg, 100);
         return File(data.AsStream(true), "image/jpeg");
